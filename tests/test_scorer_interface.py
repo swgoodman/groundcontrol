@@ -53,12 +53,17 @@ def test_hosted_scorers_report_cost_instead_of_footprint():
 
 
 def test_registry_roundtrip_and_duplicate_guard():
-    register_scorer("test-constant")(ConstantScorer)
+    register_scorer("test-constant", ConstantScorer)
     assert "test-constant" in available_scorers()
     assert isinstance(get_scorer("test-constant", score=0.9), ConstantScorer)
 
     with pytest.raises(ValueError, match="already registered"):
-        register_scorer("test-constant")(ConstantScorer)
+        register_scorer("test-constant", ConstantScorer)
 
     with pytest.raises(KeyError, match="unknown scorer"):
         get_scorer("nope")
+
+
+def test_registry_resolves_import_paths_lazily():
+    register_scorer("test-by-path", "tests.test_scorer_interface:ConstantScorer")
+    assert isinstance(get_scorer("test-by-path"), ConstantScorer)

@@ -32,7 +32,6 @@ from datasets import load_dataset
 
 from groundcheck.data.base import Example
 from groundcheck.data.splits import assign_split
-from groundcheck.registry import register_dataset
 
 REPO = "pminervini/HaluEval"
 
@@ -100,7 +99,6 @@ def to_examples(row: dict, config: str, index: int, split: str | None = None) ->
     return out
 
 
-@register_dataset("halueval")
 class HaluEval:
     name = "halueval"
     domain = "mixed"

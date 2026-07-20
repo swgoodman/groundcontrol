@@ -22,7 +22,6 @@ from typing import Any
 from datasets import load_dataset
 
 from groundcheck.data.base import Example, Label3
-from groundcheck.registry import register_dataset
 
 REPO = "wandb/RAGTruth-processed"
 
@@ -86,7 +85,6 @@ def to_example(row: dict, split: str) -> Example | None:
     )
 
 
-@register_dataset("ragtruth")
 class RAGTruth:
     name = "ragtruth"
     domain = "rag"

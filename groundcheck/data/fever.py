@@ -25,7 +25,6 @@ from __future__ import annotations
 from datasets import load_dataset
 
 from groundcheck.data.base import Example, Label3
-from groundcheck.registry import register_dataset
 
 REPO = "copenlu/fever_gold_evidence"
 
@@ -90,7 +89,6 @@ def to_example(row: dict, split: str) -> Example | None:
     )
 
 
-@register_dataset("fever")
 class Fever:
     name = "fever"
     domain = "wiki"
