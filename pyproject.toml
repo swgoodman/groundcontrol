@@ -23,6 +23,8 @@ scorers = [
     "datasets>=3.0",
 ]
 serving = ["gradio>=5.0"]
+
+[dependency-groups]
 dev = [
     "pytest>=8.0",
     "pytest-cov>=5.0",

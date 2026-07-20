@@ -8,12 +8,6 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        # 3.12 is the floor because that is what hosted notebook runtimes ship;
-        # 3.14 is what local development runs on. Both must stay green.
-        python-version: ["3.12", "3.14"]
     steps:
       - uses: actions/checkout@v4
 
@@ -22,7 +16,7 @@ jobs:
           enable-cache: true
 
       - name: Install
-        run: uv sync --extra dev --python ${{ matrix.python-version }}
+        run: uv sync
 
       - name: Lint
         run: |

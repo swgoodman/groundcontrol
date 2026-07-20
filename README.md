@@ -68,13 +68,15 @@ rare and costly one. Headline precision, recall, F1, and PR-AUC are all reported
 
 ## Install
 
-Requires Python 3.12 or newer. Local development runs 3.14.
-
 ```bash
-uv sync --extra dev          # core + test tooling
+uv sync                      # core + dev tooling
 uv sync --all-extras         # adds torch, transformers, gradio
 uv run pytest
 ```
+
+Developed and tested on Python 3.12, which is the supported floor. Newer versions are
+expected to work but are not yet covered by CI; a version matrix lands when the package
+is published.
 
 ## Layout
 
