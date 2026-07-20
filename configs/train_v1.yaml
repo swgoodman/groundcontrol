@@ -1,0 +1,38 @@
+run_name: groundcheck-deberta-v3-base-v1
+
+# MNLI-tuned, not the fever-anli variant: FEVER is in the training mix and the
+# comparison against the zero-shot baseline should not start from a different corpus.
+base_model: MoritzLaurer/DeBERTa-v3-base-mnli
+
+train_sources:
+  - name: ragtruth
+    split: train
+  - name: halueval
+    split: train
+  - name: fever
+    split: train
+    limit: 60000
+
+eval_sources:
+  - name: ragtruth
+    split: test
+    limit: 1500
+
+# Never trained on, and training rows overlapping it are removed. Measured 2026-07-20:
+# AggreFact's RAGTruth portion comes from RAGTruth test, disjoint from train, so this
+# should remove nothing. It runs anyway, because "should" is not a measurement.
+decontaminate_against:
+  - name: aggrefact
+    split: test
+
+max_length: 512
+learning_rate: 2.0e-5
+epochs: 3
+batch_size: 16
+eval_batch_size: 32
+warmup_ratio: 0.1
+weight_decay: 0.01
+seed: 0
+
+output_dir: artifacts
+hub_repo_id: null

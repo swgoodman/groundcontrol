@@ -129,3 +129,14 @@ def shared_documents(
     return document_fingerprints(train_examples, prefix) & document_fingerprints(
         eval_examples, prefix
     )
+
+
+def drop_shared_documents(
+    train_examples: list[Example],
+    eval_examples: list[Example],
+    prefix: int = DOCUMENT_PREFIX,
+) -> tuple[list[Example], int]:
+    """Remove every training example grounded in a document the evaluation set uses."""
+    held_out = document_fingerprints(eval_examples, prefix)
+    kept = [e for e in train_examples if normalize(e.context)[:prefix] not in held_out]
+    return kept, len(train_examples) - len(kept)

@@ -135,10 +135,30 @@ class NLIZeroShot:
     def score_batch(self, items: list[Example]) -> list[Verdict]:
         if not items:
             return []
-        from groundcheck.calibration import softmax
+        from groundcheck.calibration import collapse_to_binary_logits, softmax
 
-        probs = softmax(self.logits(items), self.temperature)
-        return [self._verdict_from_probs(row) for row in probs]
+        self._load()
+        raw = self.logits(items)
+
+        # Unscaled 3-way probabilities decide label3; the reported P(supported) comes
+        # from the marginalized binary problem, which is the one temperature is fitted
+        # on and the one a threshold is applied to.
+        three_way = softmax(raw)
+        entail = self._label_index["entailment"]
+        binary = collapse_to_binary_logits(raw, supported_index=entail)
+        p_supported = softmax(binary, self.temperature)[:, 1]
+
+        verdicts = []
+        for probs, p in zip(three_way, p_supported, strict=True):
+            verdict = self._verdict_from_probs(probs)
+            verdicts.append(
+                Verdict(
+                    supported=bool(p >= self.threshold),
+                    score=float(p),
+                    label3=verdict.label3,
+                )
+            )
+        return verdicts
 
     def score(self, context: str, claim: str) -> Verdict:
         example = Example(context=context, claim=claim, label="supported")

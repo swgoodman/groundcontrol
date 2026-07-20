@@ -115,3 +115,44 @@ def test_no_warning_when_the_optimum_is_interior():
     with warnings.catch_warnings():
         warnings.simplefilter("error")
         fit_temperature(logits, labels)
+
+
+def test_collapse_marginalizes_rather_than_taking_the_larger_class():
+    # logsumexp keeps both unsupported classes' mass. Taking the max would discard
+    # one, understating P(not supported) when the model hedges between them.
+    from groundcheck.calibration import collapse_to_binary_logits
+
+    hedged = np.array([[0.0, 2.0, 2.0]])
+    binary = collapse_to_binary_logits(hedged, supported_index=0)
+    p_supported = softmax(binary)[0, 1]
+
+    three_way_marginal = softmax(hedged)[0, 0]
+    assert p_supported == pytest.approx(three_way_marginal, abs=1e-9)
+
+
+def test_collapse_then_scale_preserves_decisions():
+    from groundcheck.calibration import collapse_to_binary_logits
+
+    rng = np.random.default_rng(3)
+    logits = rng.normal(size=(300, 3)) * 4
+    binary = collapse_to_binary_logits(logits)
+
+    baseline = softmax(binary, 1.0)[:, 1] >= 0.5
+    for t in (0.3, 3.0, 30.0):
+        assert ((softmax(binary, t)[:, 1] >= 0.5) == baseline).all()
+
+
+def test_scaling_the_three_vector_would_move_decisions():
+    # Documents why the collapse happens first: this is the failure it prevents.
+    # Three classes flatten toward 1/3, which is below the 0.5 threshold, so a
+    # confident "supported" becomes "not supported" purely from softening.
+    logits = np.array([[2.0, 0.0, 0.0]])
+    assert softmax(logits, 1.0)[0, 0] > 0.5
+    assert softmax(logits, 20.0)[0, 0] < 0.5
+
+
+def test_collapse_rejects_wrong_shapes():
+    from groundcheck.calibration import collapse_to_binary_logits
+
+    with pytest.raises(ValueError, match=r"\(batch, 3\)"):
+        collapse_to_binary_logits(np.zeros((2, 2)))

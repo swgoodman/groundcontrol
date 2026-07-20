@@ -96,3 +96,24 @@ def fit_temperature(
 
 def apply_temperature(logits: np.ndarray, temperature: float) -> np.ndarray:
     return softmax(logits, temperature)
+
+
+def collapse_to_binary_logits(logits: np.ndarray, supported_index: int = 0) -> np.ndarray:
+    """Marginalize 3-way logits to `[not_supported, supported]` via logsumexp.
+
+    Do this *before* scaling, never after. Temperature preserves an argmax, but the
+    reported decision thresholds P(supported) at 0.5, and in a three-class softmax that
+    probability can cross 0.5 as temperature changes — so scaling the 3-vector silently
+    moves decisions while claiming to be post-hoc.
+
+    logsumexp over the two unsupported classes is the exact marginal, so no probability
+    mass is discarded, unlike taking the larger of the two.
+    """
+    logits = np.asarray(logits, dtype=float)
+    if logits.ndim != 2 or logits.shape[1] != 3:
+        raise ValueError(f"expected (batch, 3) logits, got {logits.shape}")
+
+    unsupported = np.delete(logits, supported_index, axis=1)
+    shift = unsupported.max(axis=1)
+    not_supported = shift + np.log(np.exp(unsupported - shift[:, None]).sum(axis=1))
+    return np.stack([not_supported, logits[:, supported_index]], axis=1)
