@@ -55,6 +55,8 @@ _datasets.register("ragtruth", "groundcheck.data.ragtruth:RAGTruth")
 _datasets.register("fever", "groundcheck.data.fever:Fever")
 _datasets.register("halueval", "groundcheck.data.halueval:HaluEval")
 
+_scorers.register("nli-zeroshot", "groundcheck.scorers.nli_zeroshot:NLIZeroShot")
+
 
 def register_dataset(name: str, target: str | Callable[..., Any]) -> None:
     """Register a dataset, by import path or by object."""

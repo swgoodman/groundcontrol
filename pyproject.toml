@@ -21,6 +21,8 @@ scorers = [
     "torch>=2.4",
     "transformers>=4.44",
     "datasets>=3.0",
+    "sentencepiece>=0.2.2",
+    "protobuf>=7.35.1",
 ]
 serving = ["gradio>=5.0"]
 

@@ -14,3 +14,5 @@ build/
 data/cache/
 reports/*.json
 !reports/sample_*.json
+
+!reports/phase0_smoke.json

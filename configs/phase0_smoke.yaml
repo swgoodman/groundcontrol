@@ -1,0 +1,29 @@
+name: phase0_smoke
+
+# The smoke run: one zero-shot baseline over small slices, enough to prove the pipeline
+# end to end and put a first row on the board. Not a result worth citing.
+
+scorers:
+  - name: nli-zeroshot
+    args:
+      model_name: MoritzLaurer/DeBERTa-v3-base-mnli
+      batch_size: 16
+
+datasets:
+  - name: ragtruth
+    split: test
+    limit: 200
+  - name: halueval
+    split: test
+    limit: 200
+  - name: fever
+    split: validation
+    limit: 200
+
+# Latency is only meaningful attached to a named machine. Override this when running
+# anywhere the label would be wrong.
+benchmark_device: cpu
+benchmark_device_label: "local dev machine (unpublishable)"
+benchmark_n: 25
+
+output_dir: reports

@@ -1,0 +1,335 @@
+[
+  {
+    "scorer": "nli-zeroshot:DeBERTa-v3-base-mnli",
+    "dataset": "ragtruth",
+    "split": "test",
+    "metrics": {
+      "n": 200,
+      "balanced_acc": 0.602250296091591,
+      "precision_notsup": 0.3082191780821918,
+      "recall_notsup": 0.8823529411764706,
+      "f1_notsup": 0.45685279187817257,
+      "pr_auc_notsup": 0.40583988067180043,
+      "ece": 0.4342108832632949,
+      "reliability": [
+        {
+          "lower": 0.0,
+          "upper": 0.1,
+          "count": 0,
+          "mean_confidence": 0.0,
+          "accuracy": 0.0
+        },
+        {
+          "lower": 0.1,
+          "upper": 0.2,
+          "count": 0,
+          "mean_confidence": 0.0,
+          "accuracy": 0.0
+        },
+        {
+          "lower": 0.2,
+          "upper": 0.30000000000000004,
+          "count": 0,
+          "mean_confidence": 0.0,
+          "accuracy": 0.0
+        },
+        {
+          "lower": 0.30000000000000004,
+          "upper": 0.4,
+          "count": 0,
+          "mean_confidence": 0.0,
+          "accuracy": 0.0
+        },
+        {
+          "lower": 0.4,
+          "upper": 0.5,
+          "count": 0,
+          "mean_confidence": 0.0,
+          "accuracy": 0.0
+        },
+        {
+          "lower": 0.5,
+          "upper": 0.6000000000000001,
+          "count": 12,
+          "mean_confidence": 0.555336594581604,
+          "accuracy": 0.6666666666666666
+        },
+        {
+          "lower": 0.6000000000000001,
+          "upper": 0.7000000000000001,
+          "count": 12,
+          "mean_confidence": 0.653181162973245,
+          "accuracy": 0.5
+        },
+        {
+          "lower": 0.7000000000000001,
+          "upper": 0.8,
+          "count": 19,
+          "mean_confidence": 0.7550485353720816,
+          "accuracy": 0.5789473684210527
+        },
+        {
+          "lower": 0.8,
+          "upper": 0.9,
+          "count": 30,
+          "mean_confidence": 0.8474214936296145,
+          "accuracy": 0.5
+        },
+        {
+          "lower": 0.9,
+          "upper": 1.0,
+          "count": 127,
+          "mean_confidence": 0.9677124004015849,
+          "accuracy": 0.41732283464566927
+        }
+      ]
+    },
+    "efficiency": {
+      "device": "cpu",
+      "device_label": "local dev machine (unpublishable)",
+      "batch_size": 1,
+      "latency_ms_p50": 100.18,
+      "latency_ms_p95": 106.75,
+      "throughput_qps": 8.95,
+      "hosted": false,
+      "params_m": 184.4,
+      "size_mb": 737.7,
+      "cost_per_1k_usd": 0.0
+    },
+    "runtime": {
+      "python": "3.12.13",
+      "platform": "macOS-26.5.2-arm64-arm-64bit",
+      "machine": "arm64",
+      "compute_device": "mps"
+    },
+    "notes": {
+      "supported_rate": 0.745,
+      "coarse_label3_rate": 0.0,
+      "training_corpora": [
+        "mnli"
+      ]
+    }
+  },
+  {
+    "scorer": "nli-zeroshot:DeBERTa-v3-base-mnli",
+    "dataset": "halueval",
+    "split": "test",
+    "metrics": {
+      "n": 200,
+      "balanced_acc": 0.44,
+      "precision_notsup": 0.46296296296296297,
+      "recall_notsup": 0.75,
+      "f1_notsup": 0.5725190839694656,
+      "pr_auc_notsup": 0.6701425846289747,
+      "ece": 0.49586816684422963,
+      "reliability": [
+        {
+          "lower": 0.0,
+          "upper": 0.1,
+          "count": 0,
+          "mean_confidence": 0.0,
+          "accuracy": 0.0
+        },
+        {
+          "lower": 0.1,
+          "upper": 0.2,
+          "count": 0,
+          "mean_confidence": 0.0,
+          "accuracy": 0.0
+        },
+        {
+          "lower": 0.2,
+          "upper": 0.30000000000000004,
+          "count": 0,
+          "mean_confidence": 0.0,
+          "accuracy": 0.0
+        },
+        {
+          "lower": 0.30000000000000004,
+          "upper": 0.4,
+          "count": 0,
+          "mean_confidence": 0.0,
+          "accuracy": 0.0
+        },
+        {
+          "lower": 0.4,
+          "upper": 0.5,
+          "count": 0,
+          "mean_confidence": 0.0,
+          "accuracy": 0.0
+        },
+        {
+          "lower": 0.5,
+          "upper": 0.6000000000000001,
+          "count": 4,
+          "mean_confidence": 0.5447996780276299,
+          "accuracy": 0.5
+        },
+        {
+          "lower": 0.6000000000000001,
+          "upper": 0.7000000000000001,
+          "count": 6,
+          "mean_confidence": 0.6569002618392309,
+          "accuracy": 0.6666666666666666
+        },
+        {
+          "lower": 0.7000000000000001,
+          "upper": 0.8,
+          "count": 14,
+          "mean_confidence": 0.7591036739093917,
+          "accuracy": 0.35714285714285715
+        },
+        {
+          "lower": 0.8,
+          "upper": 0.9,
+          "count": 20,
+          "mean_confidence": 0.8568271219730377,
+          "accuracy": 0.3
+        },
+        {
+          "lower": 0.9,
+          "upper": 1.0,
+          "count": 156,
+          "mean_confidence": 0.9818707843178112,
+          "accuracy": 0.4551282051282051
+        }
+      ]
+    },
+    "efficiency": {
+      "device": "cpu",
+      "device_label": "local dev machine (unpublishable)",
+      "batch_size": 1,
+      "latency_ms_p50": 38.95,
+      "latency_ms_p95": 133.9,
+      "throughput_qps": 17.44,
+      "hosted": false,
+      "params_m": 184.4,
+      "size_mb": 737.7,
+      "cost_per_1k_usd": 0.0
+    },
+    "runtime": {
+      "python": "3.12.13",
+      "platform": "macOS-26.5.2-arm64-arm-64bit",
+      "machine": "arm64",
+      "compute_device": "mps"
+    },
+    "notes": {
+      "supported_rate": 0.5,
+      "coarse_label3_rate": 0.5,
+      "training_corpora": [
+        "mnli"
+      ]
+    }
+  },
+  {
+    "scorer": "nli-zeroshot:DeBERTa-v3-base-mnli",
+    "dataset": "fever",
+    "split": "validation",
+    "metrics": {
+      "n": 200,
+      "balanced_acc": 0.7965811965811966,
+      "precision_notsup": 0.8407643312101911,
+      "recall_notsup": 0.9777777777777777,
+      "f1_notsup": 0.9041095890410958,
+      "pr_auc_notsup": 0.9609804353248644,
+      "ece": 0.1236505328562271,
+      "reliability": [
+        {
+          "lower": 0.0,
+          "upper": 0.1,
+          "count": 0,
+          "mean_confidence": 0.0,
+          "accuracy": 0.0
+        },
+        {
+          "lower": 0.1,
+          "upper": 0.2,
+          "count": 0,
+          "mean_confidence": 0.0,
+          "accuracy": 0.0
+        },
+        {
+          "lower": 0.2,
+          "upper": 0.30000000000000004,
+          "count": 0,
+          "mean_confidence": 0.0,
+          "accuracy": 0.0
+        },
+        {
+          "lower": 0.30000000000000004,
+          "upper": 0.4,
+          "count": 0,
+          "mean_confidence": 0.0,
+          "accuracy": 0.0
+        },
+        {
+          "lower": 0.4,
+          "upper": 0.5,
+          "count": 0,
+          "mean_confidence": 0.0,
+          "accuracy": 0.0
+        },
+        {
+          "lower": 0.5,
+          "upper": 0.6000000000000001,
+          "count": 3,
+          "mean_confidence": 0.5229818224906921,
+          "accuracy": 1.0
+        },
+        {
+          "lower": 0.6000000000000001,
+          "upper": 0.7000000000000001,
+          "count": 4,
+          "mean_confidence": 0.6617472395300865,
+          "accuracy": 0.75
+        },
+        {
+          "lower": 0.7000000000000001,
+          "upper": 0.8,
+          "count": 7,
+          "mean_confidence": 0.7507980572325843,
+          "accuracy": 0.7142857142857143
+        },
+        {
+          "lower": 0.8,
+          "upper": 0.9,
+          "count": 5,
+          "mean_confidence": 0.8435068935155868,
+          "accuracy": 0.4
+        },
+        {
+          "lower": 0.9,
+          "upper": 1.0,
+          "count": 181,
+          "mean_confidence": 0.9915630946333249,
+          "accuracy": 0.8784530386740331
+        }
+      ]
+    },
+    "efficiency": {
+      "device": "cpu",
+      "device_label": "local dev machine (unpublishable)",
+      "batch_size": 1,
+      "latency_ms_p50": 28.36,
+      "latency_ms_p95": 98.03,
+      "throughput_qps": 28.45,
+      "hosted": false,
+      "params_m": 184.4,
+      "size_mb": 737.7,
+      "cost_per_1k_usd": 0.0
+    },
+    "runtime": {
+      "python": "3.12.13",
+      "platform": "macOS-26.5.2-arm64-arm-64bit",
+      "machine": "arm64",
+      "compute_device": "mps"
+    },
+    "notes": {
+      "supported_rate": 0.325,
+      "coarse_label3_rate": 0.0,
+      "training_corpora": [
+        "mnli"
+      ]
+    }
+  }
+]
