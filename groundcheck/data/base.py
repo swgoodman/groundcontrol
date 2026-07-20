@@ -28,6 +28,24 @@ def is_supported(label: Label3) -> bool:
     return label == "supported"
 
 
+# How much the source actually knows about the 3-way distinction, recorded in
+# meta["label3_source"]:
+#
+#   "native" — the dataset itself separates contradiction from mere unsupportedness
+#              (FEVER's REFUTES vs NOT ENOUGH INFO; RAGTruth's evident_conflict vs
+#              baseless_info). The 3-way label is trustworthy.
+#   "coarse" — the dataset only marks an answer as hallucinated, without saying which
+#              kind (HaluEval). Such rows carry "neutral", which claims only "not
+#              supported" rather than inventing a contradiction that was never
+#              annotated. Training should mask the 3-way loss on these and use the
+#              binary label; the binary label is exact either way.
+#
+# This matters because the contradiction signal is what the injection canary reads. If
+# coarse rows silently taught the model that any hallucination is a contradiction, the
+# canary would be learning from labels the annotators never assigned.
+LABEL3_SOURCES: tuple[str, ...] = ("native", "coarse")
+
+
 @dataclass(slots=True)
 class Example:
     context: str

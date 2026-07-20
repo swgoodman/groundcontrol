@@ -47,4 +47,6 @@ select = ["E", "F", "I", "UP", "B", "SIM"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-q"
+# Network tests are opt-in: run them with `uv run pytest -m network`.
+addopts = "-q -m 'not network'"
+markers = ["network: hits the HuggingFace Hub; deselected by default"]
