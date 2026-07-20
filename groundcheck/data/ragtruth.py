@@ -22,6 +22,7 @@ from typing import Any
 from datasets import load_dataset
 
 from groundcheck.data.base import Example, Label3
+from groundcheck.data.splits import subsample
 
 REPO = "wandb/RAGTruth-processed"
 
@@ -96,9 +97,6 @@ class RAGTruth:
         if split not in {"train", "test"}:
             raise ValueError(f"ragtruth has splits train/test, got {split!r}")
 
-        raw = load_dataset(self.repo, split=split)
-        if limit is not None:
-            raw = raw.select(range(min(limit, len(raw))))
-
+        raw = subsample(load_dataset(self.repo, split=split), limit)
         out = [to_example(row, split) for row in raw]
         return [e for e in out if e is not None]

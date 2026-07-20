@@ -143,10 +143,53 @@ def test_markdown_flags_contamination():
     class FeverTrained(StubScorer):
         training_corpora = ("mnli", "fever")
 
-    result = run(FeverTrained(), _examples(["supported", "neutral"]), "fever", "validation")
+    examples = _examples(["supported", "neutral"])
+    for e in examples:
+        e.meta["dataset"] = "fever"
+
+    result = run(FeverTrained(), examples, "fever", "validation")
     md = report.to_markdown([result])
     assert "## Contamination" in md
     assert "not comparable to a zero-shot entry" in md
+
+
+def test_contamination_is_detected_through_an_aggregated_benchmark():
+    # The trap this exists to close. A RAGTruth-trained scorer evaluated on AggreFact
+    # looks leaderboard-comparable and is not, because AggreFact redistributes
+    # RAGTruth. Nothing hardcodes that relationship: the examples report their own
+    # upstream corpus, so the overlap is observed rather than looked up.
+    class RagTruthTrained(StubScorer):
+        training_corpora = ("mnli", "ragtruth")
+
+    examples = _examples(["supported", "neutral"])
+    for e in examples:
+        e.meta.update({"dataset": "aggrefact", "source_dataset": "RAGTruth"})
+
+    result = run(RagTruthTrained(), examples, "aggrefact", "test")
+
+    assert result.notes["upstream_corpora_inside_this_eval_set"] == ["RAGTruth"]
+    assert "ragtruth" in report.to_markdown([result]).lower()
+    assert "## Contamination" in report.to_markdown([result])
+
+
+def test_no_contamination_warning_when_the_corpora_are_disjoint():
+    class MnliOnly(StubScorer):
+        training_corpora = ("mnli",)
+
+    examples = _examples(["supported", "neutral"])
+    for e in examples:
+        e.meta.update({"dataset": "aggrefact", "source_dataset": "ExpertQA"})
+
+    assert "## Contamination" not in report.to_markdown(
+        [run(MnliOnly(), examples, "aggrefact", "test")]
+    )
+
+
+def test_report_surfaces_measured_decontamination():
+    result = run(StubScorer(), _examples(["supported", "neutral"]), "aggrefact", "test")
+    result.notes["decontamination"] = {"n_removed": 42}
+
+    assert "42 training examples appeared" in report.to_markdown([result])
 
 
 def test_markdown_reports_undefined_metrics_as_not_available():
@@ -196,4 +239,11 @@ def test_config_requires_the_core_keys():
 def test_shipped_smoke_config_is_valid():
     cfg = ExperimentConfig.from_yaml("configs/phase0_smoke.yaml")
     assert cfg.benchmark_device_label
-    assert {d.name for d in cfg.datasets} == {"ragtruth", "halueval", "fever"}
+    assert {d.name for d in cfg.datasets} == {"aggrefact", "ragtruth", "fever"}
+
+
+def test_smoke_config_does_not_report_halueval():
+    # HaluEval remains a training source, but its QA answers are bare spans rather
+    # than propositions, so reporting it would measure claim form, not groundedness.
+    cfg = ExperimentConfig.from_yaml("configs/phase0_smoke.yaml")
+    assert "halueval" not in {d.name for d in cfg.datasets}

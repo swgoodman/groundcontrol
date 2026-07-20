@@ -13,6 +13,24 @@ import hashlib
 
 SPLITS: tuple[str, ...] = ("train", "validation", "test")
 
+SAMPLE_SEED = 0
+
+
+def subsample(raw, limit: int | None, seed: int = SAMPLE_SEED):
+    """Take a representative `limit` rows, not the first `limit` rows.
+
+    Published datasets are usually ordered by source corpus or task, so slicing the
+    head returns one corpus and often one class. AggreFact's first 300 test rows are
+    95% supported; RAGTruth's test split runs 900 summarization rows before the first
+    QA row. Smoke numbers taken that way look like results and describe a subset.
+
+    A seeded shuffle is reproducible, so a limited run is still deterministic.
+    """
+    if limit is None or limit >= len(raw):
+        return raw
+    return raw.shuffle(seed=seed).select(range(limit))
+
+
 DEFAULT_RATIOS: dict[str, float] = {"train": 0.8, "validation": 0.1, "test": 0.1}
 
 _BUCKETS = 10_000

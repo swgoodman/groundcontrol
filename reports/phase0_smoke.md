@@ -2,9 +2,9 @@
 
 | scorer | dataset | n | bal acc | F1 (not-sup) | PR-AUC | ECE | size MB | device | p50 ms | qps | $/1k |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| nli-zeroshot:DeBERTa-v3-base-mnli | fever | 200 | 0.797 | 0.904 | 0.961 | 0.124 | 738 | local dev machine (unpublishable) | 28.4 | 28.4 | 0.0000 |
-| nli-zeroshot:DeBERTa-v3-base-mnli | ragtruth | 200 | 0.602 | 0.457 | 0.406 | 0.434 | 738 | local dev machine (unpublishable) | 100.2 | 8.9 | 0.0000 |
-| nli-zeroshot:DeBERTa-v3-base-mnli | halueval | 200 | 0.440 | 0.573 | 0.670 | 0.496 | 738 | local dev machine (unpublishable) | 39.0 | 17.4 | 0.0000 |
+| nli-zeroshot:DeBERTa-v3-base-mnli | fever | 200 | 0.832 | 0.921 | 0.972 | 0.095 | 738 | local dev machine (unpublishable) | 23.1 | 37.2 | 0.0000 |
+| nli-zeroshot:DeBERTa-v3-base-mnli | ragtruth | 200 | 0.637 | 0.531 | 0.442 | 0.223 | 738 | local dev machine (unpublishable) | 94.2 | 10.8 | 0.0000 |
+| nli-zeroshot:DeBERTa-v3-base-mnli | aggrefact | 200 | 0.606 | 0.393 | 0.413 | 0.443 | 738 | local dev machine (unpublishable) | 93.5 | 12.2 | 0.0000 |
 
 ## What these columns mean
 
@@ -21,33 +21,33 @@
 
 ## Calibration
 
+### nli-zeroshot:DeBERTa-v3-base-mnli on aggrefact
+
+| confidence | n | accuracy |
+|---|---|---|
+| 0.5–0.6 | 16 | 0.375 |
+| 0.6–0.7 | 13 | 0.615 |
+| 0.7–0.8 | 12 | 0.500 |
+| 0.8–0.9 | 29 | 0.586 |
+| 0.9–1.0 | 130 | 0.400 |
+
 ### nli-zeroshot:DeBERTa-v3-base-mnli on ragtruth
 
 | confidence | n | accuracy |
 |---|---|---|
-| 0.5–0.6 | 12 | 0.667 |
-| 0.6–0.7 | 12 | 0.500 |
-| 0.7–0.8 | 19 | 0.579 |
-| 0.8–0.9 | 30 | 0.500 |
-| 0.9–1.0 | 127 | 0.417 |
-
-### nli-zeroshot:DeBERTa-v3-base-mnli on halueval
-
-| confidence | n | accuracy |
-|---|---|---|
-| 0.5–0.6 | 4 | 0.500 |
-| 0.6–0.7 | 6 | 0.667 |
-| 0.7–0.8 | 14 | 0.357 |
-| 0.8–0.9 | 20 | 0.300 |
-| 0.9–1.0 | 156 | 0.455 |
+| 0.5–0.6 | 22 | 0.409 |
+| 0.6–0.7 | 19 | 0.526 |
+| 0.7–0.8 | 21 | 0.381 |
+| 0.8–0.9 | 41 | 0.659 |
+| 0.9–1.0 | 97 | 0.722 |
 
 ### nli-zeroshot:DeBERTa-v3-base-mnli on fever
 
 | confidence | n | accuracy |
 |---|---|---|
 | 0.5–0.6 | 3 | 1.000 |
-| 0.6–0.7 | 4 | 0.750 |
-| 0.7–0.8 | 7 | 0.714 |
-| 0.8–0.9 | 5 | 0.400 |
-| 0.9–1.0 | 181 | 0.878 |
+| 0.6–0.7 | 3 | 0.667 |
+| 0.7–0.8 | 9 | 0.778 |
+| 0.8–0.9 | 7 | 0.571 |
+| 0.9–1.0 | 178 | 0.904 |
 

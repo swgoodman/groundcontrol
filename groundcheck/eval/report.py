@@ -17,23 +17,34 @@ from pathlib import Path
 
 from groundcheck.eval.runner import RunResult
 
-# Which evaluation datasets are compromised by which training corpora.
-_CONTAMINATION = {
-    "fever": {"fever"},
-    "ragtruth": {"ragtruth"},
-    "halueval": {"halueval"},
-}
-
 
 def contamination_warnings(results: list[RunResult]) -> list[str]:
+    """Flag results whose scorer trained on a corpus present in the evaluation data.
+
+    The corpora are those the run actually loaded, reported by the examples themselves,
+    rather than a lookup table kept in sync by hand. That matters for aggregated
+    benchmarks: AggreFact redistributes RAGTruth, so a RAGTruth-trained scorer is not
+    comparable to the zero-shot entries beside it, and nothing here needs to know that
+    in advance to say so.
+    """
     warnings: list[str] = []
     for r in results:
-        trained_on = set(r.notes.get("training_corpora", ()))
-        overlap = trained_on & _CONTAMINATION.get(r.dataset, set())
+        trained_on = {c.lower() for c in r.notes.get("corpora_the_scorer_trained_on", ())}
+        present = {c.lower() for c in r.notes.get("upstream_corpora_inside_this_eval_set", ())}
+        overlap = trained_on & present
+
         if overlap:
             warnings.append(
-                f"`{r.scorer}` was trained on {sorted(overlap)}, so its `{r.dataset}` "
-                f"result is in-domain and not comparable to a zero-shot entry."
+                f"`{r.scorer}` trained on {sorted(overlap)}, which `{r.dataset}` "
+                f"contains, so this result is in-domain and not comparable to a "
+                f"zero-shot entry."
+            )
+
+        removed = r.notes.get("decontamination", {}).get("n_removed")
+        if removed:
+            warnings.append(
+                f"`{r.scorer}` on `{r.dataset}`: {removed} training examples appeared "
+                f"in this evaluation set and were removed before training."
             )
     return warnings
 

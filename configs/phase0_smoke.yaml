@@ -9,11 +9,15 @@ scorers:
       model_name: MoritzLaurer/DeBERTa-v3-base-mnli
       batch_size: 16
 
+# AggreFact is the leaderboard-comparable surface and the one that matters. RAGTruth
+# and FEVER stay as diagnostic slices. HaluEval is deliberately absent: AggreFact
+# supersedes it for reporting, and its QA answers are bare spans rather than
+# propositions, which an entailment scorer reads as unsupported regardless of truth.
 datasets:
-  - name: ragtruth
+  - name: aggrefact
     split: test
     limit: 200
-  - name: halueval
+  - name: ragtruth
     split: test
     limit: 200
   - name: fever

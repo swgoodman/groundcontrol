@@ -54,6 +54,7 @@ _scorers = _Registry("scorer")
 _datasets.register("ragtruth", "groundcheck.data.ragtruth:RAGTruth")
 _datasets.register("fever", "groundcheck.data.fever:Fever")
 _datasets.register("halueval", "groundcheck.data.halueval:HaluEval")
+_datasets.register("aggrefact", "groundcheck.data.aggrefact:AggreFact")
 
 _scorers.register("nli-zeroshot", "groundcheck.scorers.nli_zeroshot:NLIZeroShot")
 

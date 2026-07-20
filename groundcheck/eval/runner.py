@@ -99,6 +99,13 @@ def run(
         )
 
     coarse = sum(1 for e in examples if e.meta.get("label3_source") == "coarse")
+    upstream_corpora_inside_this_eval_set = sorted(
+        {
+            str(e.meta.get("source_dataset") or e.meta.get("dataset") or dataset_name)
+            for e in examples
+        }
+    )
+
     return RunResult(
         scorer=getattr(scorer, "name", type(scorer).__name__),
         dataset=dataset_name,
@@ -109,6 +116,7 @@ def run(
         notes={
             "supported_rate": round(float(y_true.mean()), 4),
             "coarse_label3_rate": round(coarse / len(examples), 4),
-            "training_corpora": list(getattr(scorer, "training_corpora", ())),
+            "corpora_the_scorer_trained_on": list(getattr(scorer, "training_corpora", ())),
+            "upstream_corpora_inside_this_eval_set": upstream_corpora_inside_this_eval_set,
         },
     )
