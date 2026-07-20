@@ -56,6 +56,15 @@ CONFIGS: dict[str, _ConfigSpec] = {
     ),
 }
 
+# `qa` is available but off by default: its correct answers are bare spans
+# ("Arthur's Magazine") while its hallucinated answers are full sentences. A noun
+# phrase asserts nothing, so an entailment scorer rates correct answers *below*
+# hallucinated ones and the label ends up tracking claim form rather than truth.
+# Converting question plus answer into a declarative claim would fix it and is a
+# curation experiment, not a v1 dependency. Summarization and dialogue carry
+# sentence-length responses on both sides and are unaffected.
+DEFAULT_CONFIGS: tuple[str, ...] = ("summarization", "dialogue")
+
 
 def to_examples(row: dict, config: str, index: int, split: str | None = None) -> list[Example]:
     """Convert one native row into its supported and not-supported halves."""
@@ -105,7 +114,7 @@ class HaluEval:
 
     def __init__(
         self,
-        configs: tuple[str, ...] = ("qa", "summarization", "dialogue"),
+        configs: tuple[str, ...] = DEFAULT_CONFIGS,
         repo: str = REPO,
     ):
         unknown = set(configs) - set(CONFIGS)

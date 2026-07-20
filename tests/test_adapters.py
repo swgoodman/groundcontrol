@@ -204,6 +204,14 @@ def test_halueval_skips_a_missing_half_without_dropping_the_other():
     assert [e.label for e in out] == ["supported"]
 
 
+def test_qa_is_excluded_by_default_but_still_available():
+    # Correct QA answers are bare spans, so an entailment scorer reads them as
+    # unsupported regardless of truth. Opt in explicitly for curation experiments.
+    assert "qa" not in halueval.DEFAULT_CONFIGS
+    assert halueval.HaluEval().configs == ("summarization", "dialogue")
+    assert halueval.HaluEval(configs=("qa",)).configs == ("qa",)
+
+
 def test_halueval_rejects_the_general_config():
     # `general` has no source passage, so it cannot support a groundedness judgment.
     assert "general" not in halueval.CONFIGS
