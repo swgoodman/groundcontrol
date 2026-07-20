@@ -6,6 +6,7 @@ from groundcheck.data.decontaminate import (
     fingerprint,
     normalize,
     overlap_report,
+    shared_documents,
 )
 
 
@@ -83,3 +84,33 @@ def test_overlap_report_measures_without_removing():
 def test_empty_inputs_are_safe():
     kept, report = decontaminate([], [_ex("a", "b")])
     assert kept == [] and report.removed_rate == 0.0
+
+
+def test_pair_matching_misses_shared_documents_when_claims_are_re_derived():
+    # The real case: AggreFact decomposes RAGTruth responses into sentence-level
+    # claims over the same passage. Pair matching sees nothing; the document is shared.
+    passage = "Acme reported Q2 revenue of $4.2M and did not disclose net income. " * 3
+    train = [_ex(passage, "Acme posted $4.2M in Q2 revenue and $0.5M net income.")]
+    evaluation = [_ex(passage, "Acme reported $4.2M.")]
+
+    assert decontaminate(train, evaluation)[1].n_removed == 0
+    assert shared_documents(train, evaluation)
+
+
+def test_shared_documents_tolerates_reformatting_after_the_prefix():
+    head = (
+        "Chinese parents are passionate about raising child prodigies, whether they are "
+        "ten-year-old university students or violinists performing on a world stage."
+    )
+    assert len(head) > 120
+    train = [_ex(head + " Original tail.", "a claim")]
+    evaluation = [_ex(head + " Reformatted tail, restructured entirely.", "another claim")]
+
+    assert shared_documents(train, evaluation)
+
+
+def test_disjoint_documents_report_no_sharing():
+    train = [_ex("A passage about revenue reporting and quarterly disclosures.", "c1")]
+    evaluation = [_ex("A wholly different passage concerning migratory birds.", "c2")]
+
+    assert shared_documents(train, evaluation) == set()

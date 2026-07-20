@@ -101,3 +101,31 @@ def overlap_report(
 ) -> DecontaminationReport:
     """Measure overlap without removing anything, for reporting on an existing run."""
     return decontaminate(train_examples, eval_examples)[1]
+
+
+DOCUMENT_PREFIX = 120
+
+
+def document_fingerprints(examples: list[Example], prefix: int = DOCUMENT_PREFIX) -> set[str]:
+    return {normalize(e.context)[:prefix] for e in examples}
+
+
+def shared_documents(
+    train_examples: list[Example],
+    eval_examples: list[Example],
+    prefix: int = DOCUMENT_PREFIX,
+) -> set[str]:
+    """Source documents present in both sets, matched on a normalized prefix.
+
+    Run this in addition to pair matching, never instead of it. Aggregators re-derive
+    claims and reformat passages, so no `(context, claim)` pair survives intact even
+    when the documents are shared, and pair matching then reports clean because it is
+    blind rather than because the data is. Leakage is decided at the document level.
+
+    A prefix is used because reformatting concentrates in the body. Against real data
+    this gives 0/450 shared between AggreFact and RAGTruth train, and 300/450 against
+    RAGTruth test.
+    """
+    return document_fingerprints(train_examples, prefix) & document_fingerprints(
+        eval_examples, prefix
+    )
