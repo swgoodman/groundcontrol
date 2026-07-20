@@ -50,9 +50,12 @@ class NLIZeroShot:
         batch_size: int = 16,
         max_length: int = 512,
         threshold: float = 0.5,
+        temperature: float = 1.0,
     ):
         self.model_name = model_name
-        self.name = f"nli-zeroshot:{model_name.split('/')[-1]}"
+        self.temperature = temperature
+        suffix = "" if temperature == 1.0 else f"+T{temperature:.2f}"
+        self.name = f"nli-zeroshot:{model_name.split('/')[-1]}{suffix}"
         self.device = resolve_compute_device(device)
         self.batch_size = batch_size
         self.max_length = max_length
@@ -103,13 +106,16 @@ class NLIZeroShot:
             label3=_NLI_TO_LABEL3[winner],
         )
 
-    def score_batch(self, items: list[Example]) -> list[Verdict]:
+    def logits(self, items: list[Example]):
+        """Raw logits, which temperature scaling needs and probabilities cannot recover."""
+        import numpy as np
+
         if not items:
-            return []
+            return np.zeros((0, 3))
         self._load()
         torch = self._torch
 
-        verdicts: list[Verdict] = []
+        batches = []
         for start in range(0, len(items), self.batch_size):
             chunk = items[start : start + self.batch_size]
             encoded = self._tokenizer(
@@ -122,11 +128,17 @@ class NLIZeroShot:
             ).to(self.device)
 
             with torch.inference_mode():
-                logits = self._model(**encoded).logits
-            probs = torch.softmax(logits.float(), dim=-1).cpu().numpy()
-            verdicts.extend(self._verdict_from_probs(row) for row in probs)
+                batches.append(self._model(**encoded).logits.float().cpu().numpy())
 
-        return verdicts
+        return np.concatenate(batches, axis=0)
+
+    def score_batch(self, items: list[Example]) -> list[Verdict]:
+        if not items:
+            return []
+        from groundcheck.calibration import softmax
+
+        probs = softmax(self.logits(items), self.temperature)
+        return [self._verdict_from_probs(row) for row in probs]
 
     def score(self, context: str, claim: str) -> Verdict:
         example = Example(context=context, claim=claim, label="supported")
