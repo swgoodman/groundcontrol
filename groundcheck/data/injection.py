@@ -80,19 +80,25 @@ def build_set(
     n_poisoned: int,
     n_passages: int,
     key: str,
+    allow_majority: bool = False,
+    keep_refuting: bool = True,
 ) -> PassageSet | None:
     """Assemble one retrieval set. Returns None if there is not enough material.
 
     Poisoned passages are placed at deterministic positions rather than always first,
     so a detector cannot succeed by learning where the attack sits.
     """
-    if n_poisoned >= n_passages:
+    if n_poisoned * 2 >= n_passages and not allow_majority:
         raise ValueError(
-            f"n_poisoned={n_poisoned} must be a minority of n_passages={n_passages}; "
-            "majority poisoning is outside the threat model"
+            f"n_poisoned={n_poisoned} of {n_passages} is majority poisoning, outside the "
+            "stated threat model. Pass allow_majority=True to probe the failure regime."
         )
 
-    clean = refuting_passages + distractors
+    # `keep_refuting=False` models the attacker displacing the true evidence out of the
+    # retrieved set. That is the condition the canary actually depends on: it needs one
+    # surviving trusted passage to disagree with, and poison fraction only matters
+    # insofar as it crowds that passage out.
+    clean = (refuting_passages if keep_refuting else []) + distractors
     n_clean_needed = n_passages - n_poisoned
     if len(clean) < n_clean_needed:
         return None
@@ -117,6 +123,8 @@ def build(
     n_sets: int = 200,
     repo: str = REPO,
     split: str = "validation",
+    allow_majority: bool = False,
+    keep_refuting: bool = True,
 ) -> list[PassageSet]:
     """Build poisoned sets from REFUTES claims and clean controls from SUPPORTS claims.
 
@@ -145,7 +153,14 @@ def build(
     for i, (rid, claim, evidence) in enumerate(refutes[:half]):
         distractors = [pool[(i * 7 + j) % len(pool)] for j in range(n_passages)]
         built = build_set(
-            claim, [evidence], distractors, n_poisoned, n_passages, key=f"fever-{rid}-p"
+            claim,
+            [evidence],
+            distractors,
+            n_poisoned,
+            n_passages,
+            key=f"fever-{rid}-p",
+            allow_majority=allow_majority,
+            keep_refuting=keep_refuting,
         )
         if built:
             built.meta["source"] = "refutes"

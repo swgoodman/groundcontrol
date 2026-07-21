@@ -62,10 +62,29 @@ def test_clean_sets_have_no_poisoned_passages():
     assert s.poisoned_indices == [] and s.poisoned is False
 
 
-def test_majority_poisoning_is_rejected():
-    # Outside the stated threat model; failing loudly beats reporting a number for it.
-    with pytest.raises(ValueError, match="minority"):
-        build_set("C", ["r"], ["d"] * 4, 5, 5, key="k")
+def test_majority_poisoning_is_rejected_by_default():
+    # Outside the stated threat model. The earlier guard only caught k >= n, so it
+    # silently permitted 3-of-5 and 4-of-5, which are majorities.
+    for k in (3, 4, 5):
+        with pytest.raises(ValueError, match="majority poisoning"):
+            build_set("C", ["r"], ["d"] * 6, k, 5, key="k")
+
+
+def test_majority_poisoning_can_be_probed_deliberately():
+    # Reporting where detection breaks is part of the result, but it has to be opt-in
+    # so a majority-poisoned number can never be produced by accident.
+    s = build_set("C", ["r"], ["d"] * 6, 3, 5, key="k", allow_majority=True)
+    assert s.n_poisoned == 3
+
+
+def test_displacing_the_evidence_removes_the_trusted_contradiction():
+    # The condition the canary actually depends on: not the poison fraction, but
+    # whether any trusted contradicting passage survives retrieval.
+    kept = build_set("C", ["REFUTES C"], ["d"] * 6, 1, 5, key="k")
+    displaced = build_set("C", ["REFUTES C"], ["d"] * 6, 1, 5, key="k", keep_refuting=False)
+
+    assert any("REFUTES C" in p for p in kept.passages)
+    assert not any("REFUTES C" in p for p in displaced.passages)
 
 
 def test_insufficient_material_returns_none():

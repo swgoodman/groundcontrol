@@ -68,16 +68,30 @@ def evaluate(scorer, sets) -> dict:
 def main() -> None:
     scorer = Finetuned(MODEL, name="groundcheck", temperature=TEMPERATURE)
 
-    results = {}
-    for k in (1, 2):
-        sets = injection.build(
-            n_poisoned=k, n_passages=N_PASSAGES, n_sets=N_SETS, split="validation"
-        )
-        print(f"k={k}: {len(sets)} sets ({sum(s.poisoned for s in sets)} poisoned)")
-        results[f"k={k}_of_{N_PASSAGES}"] = evaluate(scorer, sets)
-        print(json.dumps(results[f"k={k}_of_{N_PASSAGES}"], indent=2))
+    # Two conditions. Varying k alone does not test what the canary depends on: the
+    # builder keeps the refuting passage, so a trusted contradiction survives even at
+    # k=4. `keep_refuting=False` models the attacker displacing the true evidence out
+    # of the retrieved set, which is the condition that should actually blind it.
+    conditions = [(k, True) for k in (1, 2, 3, 4)] + [(k, False) for k in (1, 2)]
 
-    out = Path("reports/canary_v0.json")
+    results = {}
+    for k, keep in conditions:
+        sets = injection.build(
+            n_poisoned=k,
+            n_passages=N_PASSAGES,
+            n_sets=N_SETS,
+            split="validation",
+            allow_majority=True,
+            keep_refuting=keep,
+        )
+        name = f"k={k}_of_{N_PASSAGES}" + ("" if keep else "_evidence_displaced")
+        print(f"{name}: {len(sets)} sets ({sum(s.poisoned for s in sets)} poisoned)")
+        results[name] = evaluate(scorer, sets)
+        results[name]["majority_poisoned"] = k * 2 >= N_PASSAGES
+        results[name]["trusted_evidence_retrieved"] = keep
+        print(json.dumps(results[name], indent=2))
+
+    out = Path("reports/canary_sweep.json")
     out.write_text(json.dumps(results, indent=2), encoding="utf-8")
     print(f"\nwrote {out}")
 
