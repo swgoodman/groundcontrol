@@ -14,6 +14,7 @@ import numpy as np
 from groundcheck.data.base import Example
 from groundcheck.device import BenchmarkDevice, describe_runtime
 from groundcheck.eval import metrics as metrics_mod
+from groundcheck.eval import selective
 from groundcheck.eval.efficiency import Efficiency
 from groundcheck.eval.efficiency import measure as measure_efficiency
 from groundcheck.eval.metrics import Metrics
@@ -25,6 +26,7 @@ class RunResult:
     dataset: str
     split: str
     metrics: Metrics
+    gate: selective.RiskCoverage | None = None
     efficiency: Efficiency | None = None
     runtime: dict = field(default_factory=dict)
     notes: dict = field(default_factory=dict)
@@ -32,6 +34,7 @@ class RunResult:
     def to_dict(self) -> dict:
         d = asdict(self)
         d["metrics"] = self.metrics.to_dict()
+        d["gate"] = self.gate.to_dict() if self.gate else None
         d["efficiency"] = self.efficiency.to_dict() if self.efficiency else None
         return d
 
@@ -48,6 +51,10 @@ class RunResult:
             "pr_auc_notsup": m.pr_auc_notsup,
             "ece": m.ece,
         }
+        if self.gate:
+            row["aurc"] = self.gate.aurc
+            row["gate_lift"] = self.gate.lift_over_random
+            row["cov_at_1pct"] = self.gate.coverage_at_risk(0.01)
         if e:
             row.update(
                 {
@@ -91,6 +98,7 @@ def run(
     y_true = np.array([e.supported for e in examples], dtype=bool)
     p_supported = np.array([v.score for v in verdicts], dtype=float)
     quality = metrics_mod.compute(y_true, p_supported, n_bins=n_bins)
+    gate = selective.risk_coverage(y_true, p_supported)
 
     efficiency = None
     if benchmark_device is not None:
@@ -111,6 +119,7 @@ def run(
         dataset=dataset_name,
         split=split,
         metrics=quality,
+        gate=gate,
         efficiency=efficiency,
         runtime=describe_runtime(),
         notes={

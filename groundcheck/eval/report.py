@@ -116,6 +116,38 @@ def to_markdown(results: list[RunResult], title: str = "Leaderboard") -> str:
         "- **n/a** — undefined for this slice, most often a single-class split.",
     ]
 
+    gated = [r for r in results if r.gate]
+    if gated:
+        lines += [
+            "",
+            "## As a gate",
+            "",
+            "Auto-accept the answers a scorer is most confident are grounded, review the",
+            "rest. **Risk** is how many ungrounded answers still reach a user at that",
+            "coverage. The row to beat is *no information*: a scorer whose confidence",
+            "means nothing holds risk flat at the base rate, making the gate equivalent",
+            "to reviewing a random sample.",
+            "",
+            "| scorer | dataset | base rate | risk @50% | risk @80% | risk @100% "
+            "| max coverage under 1% risk | lift |",
+            "|---|---|---|---|---|---|---|---|",
+        ]
+        for r in gated:
+            g = r.gate
+            lines.append(
+                f"| {r.scorer} | {r.dataset} | {g.base_rate:.3f} "
+                f"| {g.risk_at_coverage(0.5):.3f} | {g.risk_at_coverage(0.8):.3f} "
+                f"| {g.risk_at_coverage(1.0):.3f} | {g.coverage_at_risk(0.01):.1%} "
+                f"| {g.lift_over_random:.2f} |"
+            )
+        lines += [
+            "",
+            "**lift** places the scorer between no-information (0.00) and a perfect",
+            "ranking (1.00). Normalized against what is achievable rather than against",
+            "zero, since past the grounded fraction even flawless ordering must start",
+            "admitting ungrounded answers.",
+        ]
+
     calibration = [r for r in results if r.metrics.reliability]
     if calibration:
         lines += ["", "## Calibration", ""]

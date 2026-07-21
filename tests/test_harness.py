@@ -247,3 +247,25 @@ def test_smoke_config_does_not_report_halueval():
     # than propositions, so reporting it would measure claim form, not groundedness.
     cfg = ExperimentConfig.from_yaml("configs/phase0_smoke.yaml")
     assert "halueval" not in {d.name for d in cfg.datasets}
+
+
+def test_report_includes_the_gate_section():
+    strong = run(
+        StubScorer(scores=[0.95, 0.9, 0.85, 0.1, 0.05]),
+        _examples(["supported"] * 3 + ["neutral"] * 2),
+        "s",
+        "test",
+    )
+    md = report.to_markdown([strong])
+
+    assert "## As a gate" in md
+    assert "max coverage under 1% risk" in md
+
+
+def test_gate_columns_reach_the_leaderboard_row():
+    result = run(StubScorer(scores=[0.9, 0.1]), _examples(["supported", "neutral"]), "s", "test")
+    row = result.to_row()
+
+    assert row["aurc"] >= 0
+    assert row["gate_lift"] == pytest.approx(1.0)
+    assert row["cov_at_1pct"] == pytest.approx(0.5)

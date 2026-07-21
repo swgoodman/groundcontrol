@@ -43,6 +43,11 @@ _NLI_TO_LABEL3: dict[str, Label3] = {
 
 
 class NLIZeroShot:
+    # The checkpoint's label vocabulary, mapped onto the internal scheme. Overridden by
+    # scorers whose head was trained with our own label names.
+    LABEL_MAP = _NLI_TO_LABEL3
+    SUPPORTED_KEY = "entailment"
+
     def __init__(
         self,
         model_name: str = DEFAULT_MODEL,
@@ -51,8 +56,12 @@ class NLIZeroShot:
         max_length: int = 512,
         threshold: float = 0.5,
         temperature: float = 1.0,
+        training_corpora: tuple[str, ...] | None = None,
     ):
         self.model_name = model_name
+        # A fine-tuned checkpoint is not in the known-corpora table, and its own
+        # training mix is exactly what the contamination check needs to see.
+        self._training_corpora = training_corpora
         self.temperature = temperature
         suffix = "" if temperature == 1.0 else f"+T{temperature:.2f}"
         self.name = f"nli-zeroshot:{model_name.split('/')[-1]}{suffix}"
@@ -66,6 +75,8 @@ class NLIZeroShot:
 
     @property
     def training_corpora(self) -> tuple[str, ...]:
+        if self._training_corpora is not None:
+            return self._training_corpora
         return KNOWN_TRAINING_CORPORA.get(self.model_name, ())
 
     def _load(self) -> None:
@@ -86,16 +97,16 @@ class NLIZeroShot:
         self._label_index = {
             str(label).lower(): int(idx) for idx, label in model.config.id2label.items()
         }
-        missing = set(_NLI_TO_LABEL3) - set(self._label_index)
+        missing = set(self.LABEL_MAP) - set(self._label_index)
         if missing:
             raise ValueError(
-                f"{self.model_name} does not expose the NLI labels {sorted(missing)}; "
+                f"{self.model_name} does not expose the labels {sorted(missing)}; "
                 f"found {sorted(self._label_index)}. This scorer needs a 3-way NLI head."
             )
 
     def _verdict_from_probs(self, probs) -> Verdict:
-        p_entail = float(probs[self._label_index["entailment"]])
-        winner = max(_NLI_TO_LABEL3, key=lambda k: float(probs[self._label_index[k]]))
+        p_entail = float(probs[self._label_index[self.SUPPORTED_KEY]])
+        winner = max(self.LABEL_MAP, key=lambda k: float(probs[self._label_index[k]]))
         return Verdict(
             # The binary head thresholds P(entailment) rather than taking the argmax,
             # because that is the quantity the leaderboard scores and calibrates. The
@@ -103,7 +114,7 @@ class NLIZeroShot:
             # sitting below the threshold. label3 keeps the argmax view.
             supported=p_entail >= self.threshold,
             score=p_entail,
-            label3=_NLI_TO_LABEL3[winner],
+            label3=self.LABEL_MAP[winner],
         )
 
     def logits(self, items: list[Example]):
@@ -144,7 +155,7 @@ class NLIZeroShot:
         # from the marginalized binary problem, which is the one temperature is fitted
         # on and the one a threshold is applied to.
         three_way = softmax(raw)
-        entail = self._label_index["entailment"]
+        entail = self._label_index[self.SUPPORTED_KEY]
         binary = collapse_to_binary_logits(raw, supported_index=entail)
         p_supported = softmax(binary, self.temperature)[:, 1]
 
