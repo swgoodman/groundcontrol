@@ -6,7 +6,7 @@ this is meant to run. So every leaderboard row carries footprint and latency nex
 quality.
 
 Latency is only meaningful attached to the machine that produced it, so `measure`
-requires an explicit `BenchmarkDevice`. See `groundcheck/device.py` for why that is not
+requires an explicit `BenchmarkDevice`. See `groundcontrol/device.py` for why that is not
 inferred.
 """
 
@@ -16,9 +16,9 @@ import statistics
 import time
 from dataclasses import asdict, dataclass
 
-from groundcheck.data.base import Example
-from groundcheck.device import BenchmarkDevice
-from groundcheck.scorers.base import EfficiencyProfile
+from groundcontrol.data.base import Example
+from groundcontrol.device import BenchmarkDevice
+from groundcontrol.scorers.base import EfficiencyProfile
 
 
 @dataclass(slots=True)

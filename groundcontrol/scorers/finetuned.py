@@ -12,7 +12,7 @@ leaderboard-comparable.
 
 from __future__ import annotations
 
-from groundcheck.scorers.nli_zeroshot import NLIZeroShot
+from groundcontrol.scorers.nli_zeroshot import NLIZeroShot
 
 
 class Finetuned(NLIZeroShot):
@@ -23,6 +23,6 @@ class Finetuned(NLIZeroShot):
     }
     SUPPORTED_KEY = "supported"
 
-    def __init__(self, model_name: str, name: str = "groundcheck", **kwargs):
+    def __init__(self, model_name: str, name: str = "groundcontrol", **kwargs):
         super().__init__(model_name=model_name, **kwargs)
         self.name = name

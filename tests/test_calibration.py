@@ -5,13 +5,13 @@ import warnings
 import numpy as np
 import pytest
 
-from groundcheck.calibration import (
+from groundcontrol.calibration import (
     apply_temperature,
     fit_temperature,
     negative_log_likelihood,
     softmax,
 )
-from groundcheck.eval.metrics import expected_calibration_error
+from groundcontrol.eval.metrics import expected_calibration_error
 
 
 def _overconfident(n=400, seed=0):
@@ -120,7 +120,7 @@ def test_no_warning_when_the_optimum_is_interior():
 def test_collapse_marginalizes_rather_than_taking_the_larger_class():
     # logsumexp keeps both unsupported classes' mass. Taking the max would discard
     # one, understating P(not supported) when the model hedges between them.
-    from groundcheck.calibration import collapse_to_binary_logits
+    from groundcontrol.calibration import collapse_to_binary_logits
 
     hedged = np.array([[0.0, 2.0, 2.0]])
     binary = collapse_to_binary_logits(hedged, supported_index=0)
@@ -131,7 +131,7 @@ def test_collapse_marginalizes_rather_than_taking_the_larger_class():
 
 
 def test_collapse_then_scale_preserves_decisions():
-    from groundcheck.calibration import collapse_to_binary_logits
+    from groundcontrol.calibration import collapse_to_binary_logits
 
     rng = np.random.default_rng(3)
     logits = rng.normal(size=(300, 3)) * 4
@@ -152,7 +152,7 @@ def test_scaling_the_three_vector_would_move_decisions():
 
 
 def test_collapse_rejects_wrong_shapes():
-    from groundcheck.calibration import collapse_to_binary_logits
+    from groundcontrol.calibration import collapse_to_binary_logits
 
     with pytest.raises(ValueError, match=r"\(batch, 3\)"):
         collapse_to_binary_logits(np.zeros((2, 2)))

@@ -11,8 +11,8 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from groundcheck.data.base import Example
-from groundcheck.train import (
+from groundcontrol.data.base import Example
+from groundcontrol.train import (
     LABEL_TO_INDEX,
     SourceSpec,
     TrainConfig,
@@ -126,7 +126,7 @@ def test_preparation_removes_training_rows_sharing_an_evaluation_document(monkey
 
     sources = {"train": train, "held": held_out}
     monkeypatch.setattr(
-        "groundcheck.train.load_sources",
+        "groundcontrol.train.load_sources",
         lambda specs: sources[specs[0].name],
     )
 
@@ -143,7 +143,7 @@ def test_preparation_removes_training_rows_sharing_an_evaluation_document(monkey
 
 
 def test_preparation_refuses_an_empty_mix(monkeypatch):
-    monkeypatch.setattr("groundcheck.train.load_sources", lambda specs: [])
+    monkeypatch.setattr("groundcontrol.train.load_sources", lambda specs: [])
     cfg = TrainConfig(run_name="t", train_sources=[SourceSpec("nothing", "train")])
 
     with pytest.raises(ValueError, match="no training examples"):

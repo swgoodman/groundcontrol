@@ -758,7 +758,7 @@ wheels = [
 ]
 
 [[package]]
-name = "groundcheck"
+name = "groundcontrol"
 version = "0.0.1"
 source = { editable = "." }
 dependencies = [

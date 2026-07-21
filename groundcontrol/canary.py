@@ -29,7 +29,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from groundcheck.data.base import Example
+from groundcontrol.data.base import Example
 
 
 @dataclass(slots=True)

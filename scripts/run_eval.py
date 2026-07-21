@@ -8,11 +8,11 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from groundcheck.config import ExperimentConfig
-from groundcheck.device import BenchmarkDevice
-from groundcheck.eval import report
-from groundcheck.eval.runner import RunResult, run
-from groundcheck.registry import get_dataset, get_scorer
+from groundcontrol.config import ExperimentConfig
+from groundcontrol.device import BenchmarkDevice
+from groundcontrol.eval import report
+from groundcontrol.eval.runner import RunResult, run
+from groundcontrol.registry import get_dataset, get_scorer
 
 
 def main() -> None:

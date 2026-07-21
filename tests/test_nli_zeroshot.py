@@ -10,7 +10,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from groundcheck.scorers.nli_zeroshot import NLIZeroShot
+from groundcontrol.scorers.nli_zeroshot import NLIZeroShot
 
 
 def _scorer_with_label_order(order: list[str], threshold: float = 0.5) -> NLIZeroShot:

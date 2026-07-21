@@ -21,8 +21,8 @@ from typing import Any
 
 from datasets import load_dataset
 
-from groundcheck.data.base import Example, Label3
-from groundcheck.data.splits import subsample
+from groundcontrol.data.base import Example, Label3
+from groundcontrol.data.splits import subsample
 
 REPO = "wandb/RAGTruth-processed"
 

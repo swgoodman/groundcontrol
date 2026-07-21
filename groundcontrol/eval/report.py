@@ -15,7 +15,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from groundcheck.eval.runner import RunResult
+from groundcontrol.eval.runner import RunResult
 
 
 def contamination_warnings(results: list[RunResult]) -> list[str]:

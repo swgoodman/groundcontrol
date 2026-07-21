@@ -2,15 +2,15 @@
 
 | scorer | dataset | n | bal acc | F1 (not-sup) | PR-AUC | ECE | size MB | device | p50 ms | qps | $/1k |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| groundcheck-deberta-v3-base | ragtruth | 900 | 0.807 | 0.740 | 0.833 | 0.019 | - | - | - | - | - |
-| groundcheck-deberta-v3-base | aggrefact | 2000 | 0.695 | 0.508 | 0.542 | 0.181 | - | - | - | - | - |
+| groundcontrol-deberta-v3-base | ragtruth | 900 | 0.807 | 0.740 | 0.833 | 0.019 | - | - | - | - | - |
+| groundcontrol-deberta-v3-base | aggrefact | 2000 | 0.695 | 0.508 | 0.542 | 0.181 | - | - | - | - | - |
 | nli-zeroshot:DeBERTa-v3-base-mnli | aggrefact | 2000 | 0.591 | 0.422 | 0.430 | 0.474 | - | - | - | - | - |
 | nli-zeroshot:DeBERTa-v3-base-mnli | ragtruth | 900 | 0.575 | 0.494 | 0.391 | 0.275 | - | - | - | - | - |
 
 ## Contamination
 
-- `groundcheck-deberta-v3-base` trained on ['ragtruth'], which `aggrefact` contains, so this result is in-domain and not comparable to a zero-shot entry.
-- `groundcheck-deberta-v3-base` trained on ['ragtruth'], which `ragtruth` contains, so this result is in-domain and not comparable to a zero-shot entry.
+- `groundcontrol-deberta-v3-base` trained on ['ragtruth'], which `aggrefact` contains, so this result is in-domain and not comparable to a zero-shot entry.
+- `groundcontrol-deberta-v3-base` trained on ['ragtruth'], which `ragtruth` contains, so this result is in-domain and not comparable to a zero-shot entry.
 
 ## What these columns mean
 
@@ -35,9 +35,9 @@ to reviewing a random sample.
 
 | scorer | dataset | base rate | risk @50% | risk @80% | risk @100% | max coverage under 1% risk | lift |
 |---|---|---|---|---|---|---|---|
-| groundcheck-deberta-v3-base | aggrefact | 0.233 | 0.094 | 0.147 | 0.233 | 0.9% | 0.63 |
+| groundcontrol-deberta-v3-base | aggrefact | 0.233 | 0.094 | 0.147 | 0.233 | 0.9% | 0.63 |
 | nli-zeroshot:DeBERTa-v3-base-mnli | aggrefact | 0.233 | 0.134 | 0.181 | 0.233 | 0.3% | 0.45 |
-| groundcheck-deberta-v3-base | ragtruth | 0.347 | 0.078 | 0.210 | 0.347 | 17.8% | 0.84 |
+| groundcontrol-deberta-v3-base | ragtruth | 0.347 | 0.078 | 0.210 | 0.347 | 17.8% | 0.84 |
 | nli-zeroshot:DeBERTa-v3-base-mnli | ragtruth | 0.347 | 0.276 | 0.344 | 0.347 | 4.0% | 0.37 |
 
 **lift** places the scorer between no-information (0.00) and a perfect
@@ -47,7 +47,7 @@ admitting ungrounded answers.
 
 ## Calibration
 
-### groundcheck-deberta-v3-base on aggrefact
+### groundcontrol-deberta-v3-base on aggrefact
 
 | confidence | n | accuracy |
 |---|---|---|
@@ -67,7 +67,7 @@ admitting ungrounded answers.
 | 0.8–0.9 | 240 | 0.425 |
 | 0.9–1.0 | 1344 | 0.393 |
 
-### groundcheck-deberta-v3-base on ragtruth
+### groundcontrol-deberta-v3-base on ragtruth
 
 | confidence | n | accuracy |
 |---|---|---|

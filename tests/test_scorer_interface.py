@@ -1,12 +1,12 @@
 import pytest
 
-from groundcheck.data.base import Example
-from groundcheck.registry import (
+from groundcontrol.data.base import Example
+from groundcontrol.registry import (
     available_scorers,
     get_scorer,
     register_scorer,
 )
-from groundcheck.scorers.base import EfficiencyProfile, Scorer, Verdict
+from groundcontrol.scorers.base import EfficiencyProfile, Scorer, Verdict
 
 
 class ConstantScorer:

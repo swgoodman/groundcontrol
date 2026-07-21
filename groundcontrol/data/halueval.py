@@ -30,8 +30,8 @@ from dataclasses import dataclass
 
 from datasets import load_dataset
 
-from groundcheck.data.base import Example
-from groundcheck.data.splits import assign_split
+from groundcontrol.data.base import Example
+from groundcontrol.data.splits import assign_split
 
 REPO = "pminervini/HaluEval"
 

@@ -19,7 +19,7 @@ and tagged `label3_source="coarse"`, the same treatment HaluEval gets.
 **It contains RAGTruth, among others.** Training on RAGTruth and then reporting an
 AggreFact number is not leaderboard-comparable. Every row carries the upstream corpus
 in `meta["source_dataset"]` and the upstream `contamination_identifier`, which is what
-`groundcheck.data.decontaminate` uses to make the overlap measurable rather than
+`groundcontrol.data.decontaminate` uses to make the overlap measurable rather than
 assumed.
 
 Licensing note: CC-BY-ND-4.0. Evaluating against it is fine; publishing a modified or
@@ -31,8 +31,8 @@ from __future__ import annotations
 
 from datasets import load_dataset
 
-from groundcheck.data.base import Example
-from groundcheck.data.splits import subsample
+from groundcontrol.data.base import Example
+from groundcontrol.data.splits import subsample
 
 REPO = "lytang/LLM-AggreFact"
 

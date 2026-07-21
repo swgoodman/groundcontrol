@@ -3,7 +3,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from groundcheck.eval.selective import risk_coverage, summarize
+from groundcontrol.eval.selective import risk_coverage, summarize
 
 
 def test_full_coverage_risk_equals_the_base_rate():

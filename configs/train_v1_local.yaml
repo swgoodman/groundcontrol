@@ -1,4 +1,4 @@
-run_name: groundcheck-deberta-v3-base-v1-local
+run_name: groundcontrol-deberta-v3-base-v1-local
 
 # Same recipe as train_v1, sized for an overnight run on Apple silicon (~3.4
 # samples/sec at 512 tokens). The full mix is a ~26 hour job here; run that on a

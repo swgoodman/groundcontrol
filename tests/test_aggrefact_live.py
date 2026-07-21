@@ -11,8 +11,8 @@ from __future__ import annotations
 
 import pytest
 
-from groundcheck.data.aggrefact import AggreFact
-from groundcheck.data.base import LABELS_3
+from groundcontrol.data.aggrefact import AggreFact
+from groundcontrol.data.base import LABELS_3
 
 pytestmark = pytest.mark.network
 
@@ -54,7 +54,7 @@ def test_label_polarity_is_not_inverted():
     _skip_without_access()
     import numpy as np
 
-    from groundcheck.scorers.nli_zeroshot import NLIZeroShot
+    from groundcontrol.scorers.nli_zeroshot import NLIZeroShot
 
     examples = AggreFact().load("test", limit=300)
     verdicts = NLIZeroShot().score_batch(examples)

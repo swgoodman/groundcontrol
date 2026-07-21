@@ -23,9 +23,9 @@ baseline that has seen the test set is not one. The training corpora are recorde
 
 from __future__ import annotations
 
-from groundcheck.data.base import Example, Label3
-from groundcheck.device import resolve_compute_device
-from groundcheck.scorers.base import EfficiencyProfile, Verdict
+from groundcontrol.data.base import Example, Label3
+from groundcontrol.device import resolve_compute_device
+from groundcontrol.scorers.base import EfficiencyProfile, Verdict
 
 DEFAULT_MODEL = "MoritzLaurer/DeBERTa-v3-base-mnli"
 
@@ -146,7 +146,7 @@ class NLIZeroShot:
     def score_batch(self, items: list[Example]) -> list[Verdict]:
         if not items:
             return []
-        from groundcheck.calibration import collapse_to_binary_logits, softmax
+        from groundcontrol.calibration import collapse_to_binary_logits, softmax
 
         self._load()
         raw = self.logits(items)

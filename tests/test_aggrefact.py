@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import pytest
 
-from groundcheck.data import aggrefact
-from groundcheck.registry import get_dataset
+from groundcontrol.data import aggrefact
+from groundcontrol.registry import get_dataset
 
 
 def _row(label: int = 1, **over):

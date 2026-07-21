@@ -2,7 +2,7 @@ from collections import Counter
 
 import pytest
 
-from groundcheck.data.splits import assign_split, subsample
+from groundcontrol.data.splits import assign_split, subsample
 
 
 def test_assignment_is_stable_across_calls():

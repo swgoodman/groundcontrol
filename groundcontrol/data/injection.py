@@ -30,8 +30,8 @@ from __future__ import annotations
 import hashlib
 from dataclasses import dataclass, field
 
-from groundcheck.data.fever import REPO, _join_evidence
-from groundcheck.data.splits import subsample
+from groundcontrol.data.fever import REPO, _join_evidence
+from groundcontrol.data.splits import subsample
 
 # Indirect-injection payload shapes. Deliberately plain: the point is that the passage
 # asserts the claim as authoritative, not that the wording is clever.

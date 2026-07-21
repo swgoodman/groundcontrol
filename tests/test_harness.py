@@ -11,13 +11,13 @@ import json
 
 import pytest
 
-from groundcheck.config import ExperimentConfig
-from groundcheck.data.base import Example
-from groundcheck.device import BenchmarkDevice
-from groundcheck.eval import report
-from groundcheck.eval.efficiency import measure
-from groundcheck.eval.runner import run
-from groundcheck.scorers.base import EfficiencyProfile, Verdict
+from groundcontrol.config import ExperimentConfig
+from groundcontrol.data.base import Example
+from groundcontrol.device import BenchmarkDevice
+from groundcontrol.eval import report
+from groundcontrol.eval.efficiency import measure
+from groundcontrol.eval.runner import run
+from groundcontrol.scorers.base import EfficiencyProfile, Verdict
 
 
 class StubScorer:

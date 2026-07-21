@@ -10,8 +10,8 @@ from __future__ import annotations
 
 import pytest
 
-from groundcheck.data import fever, halueval, ragtruth
-from groundcheck.registry import available_datasets, get_dataset
+from groundcontrol.data import fever, halueval, ragtruth
+from groundcontrol.registry import available_datasets, get_dataset
 
 # --- RAGTruth ---------------------------------------------------------------------
 

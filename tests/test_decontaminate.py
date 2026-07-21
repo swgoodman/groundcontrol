@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from groundcheck.data.base import Example
-from groundcheck.data.decontaminate import (
+from groundcontrol.data.base import Example
+from groundcontrol.data.decontaminate import (
     decontaminate,
     fingerprint,
     normalize,

@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import pytest
 
-from groundcheck import canary
-from groundcheck.data.injection import PassageSet, build_set, make_payload
-from groundcheck.scorers.base import Verdict
+from groundcontrol import canary
+from groundcontrol.data.injection import PassageSet, build_set, make_payload
+from groundcontrol.scorers.base import Verdict
 
 
 class ScriptedScorer:

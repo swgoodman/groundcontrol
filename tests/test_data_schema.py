@@ -1,6 +1,6 @@
 import pytest
 
-from groundcheck.data.base import Example, is_supported
+from groundcontrol.data.base import Example, is_supported
 
 
 def test_label_collapse_polarity():

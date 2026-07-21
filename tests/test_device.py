@@ -1,6 +1,6 @@
 import pytest
 
-from groundcheck.device import BenchmarkDevice, describe_runtime, resolve_compute_device
+from groundcontrol.device import BenchmarkDevice, describe_runtime, resolve_compute_device
 
 
 def test_compute_device_is_resolvable_and_overridable():

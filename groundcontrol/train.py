@@ -4,7 +4,7 @@ Lives in the package rather than in notebook cells so it can be tested, and so t
 notebook stays a thin driver that clones, installs, and calls `train()`. The same
 arrangement is what lets a Colab run and a local run be the same code.
 
-Evaluation during training calls `groundcheck.eval.metrics`, the module the harness
+Evaluation during training calls `groundcontrol.eval.metrics`, the module the harness
 uses, so a training log and a leaderboard row cannot disagree about what balanced
 accuracy means.
 
@@ -23,10 +23,10 @@ from typing import Any
 import numpy as np
 import yaml
 
-from groundcheck.data.base import Example
-from groundcheck.data.decontaminate import decontaminate, drop_shared_documents
-from groundcheck.losses import LABEL_ORDER, SUPPORTED
-from groundcheck.registry import get_dataset
+from groundcontrol.data.base import Example
+from groundcontrol.data.decontaminate import decontaminate, drop_shared_documents
+from groundcontrol.losses import LABEL_ORDER, SUPPORTED
+from groundcontrol.registry import get_dataset
 
 LABEL_TO_INDEX = {name: i for i, name in enumerate(LABEL_ORDER)}
 
@@ -148,10 +148,10 @@ def prepare_training_data(config: TrainConfig) -> tuple[list[Example], dict]:
 
 def build_compute_metrics(temperature: float = 1.0):
     """Training-time metrics, computed by the same module the harness uses."""
-    from groundcheck.calibration import collapse_to_binary_logits, softmax
+    from groundcontrol.calibration import collapse_to_binary_logits, softmax
 
     def compute_metrics(eval_pred):
-        from groundcheck.eval import metrics as metrics_mod
+        from groundcontrol.eval import metrics as metrics_mod
 
         logits, label_ids = eval_pred
         binary = collapse_to_binary_logits(np.asarray(logits), supported_index=SUPPORTED)
@@ -226,9 +226,9 @@ def _make_trainer_class():
     """Build the Trainer subclass at call time, so importing this module needs no torch."""
     from transformers import Trainer
 
-    from groundcheck.losses import masked_three_way_loss
+    from groundcontrol.losses import masked_three_way_loss
 
-    class GroundcheckTrainer(Trainer):
+    class GroundcontrolTrainer(Trainer):
         class_weights = None
 
         def compute_loss(self, model, inputs, return_outputs=False, **kwargs):
@@ -247,7 +247,7 @@ def _make_trainer_class():
             )
             return (loss, outputs) if return_outputs else loss
 
-    return GroundcheckTrainer
+    return GroundcontrolTrainer
 
 
 def _collator(tokenizer):
@@ -272,8 +272,8 @@ def fit_temperature_on(model, dataset, tokenizer, config: TrainConfig) -> tuple[
     import torch
     from transformers import TrainingArguments
 
-    from groundcheck.calibration import collapse_to_binary_logits, fit_temperature, softmax
-    from groundcheck.eval import metrics as metrics_mod
+    from groundcontrol.calibration import collapse_to_binary_logits, fit_temperature, softmax
+    from groundcontrol.eval import metrics as metrics_mod
 
     trainer_cls = _make_trainer_class()
     trainer = trainer_cls(
@@ -317,8 +317,8 @@ def train(config: TrainConfig, push_to_hub: bool = False) -> dict:
         set_seed,
     )
 
-    from groundcheck.device import describe_runtime, resolve_compute_device
-    from groundcheck.losses import class_weights_from_labels
+    from groundcontrol.device import describe_runtime, resolve_compute_device
+    from groundcontrol.losses import class_weights_from_labels
 
     set_seed(config.seed)
     output_dir = Path(config.output_dir) / config.run_name

@@ -11,13 +11,13 @@ from dataclasses import asdict, dataclass, field
 
 import numpy as np
 
-from groundcheck.data.base import Example
-from groundcheck.device import BenchmarkDevice, describe_runtime
-from groundcheck.eval import metrics as metrics_mod
-from groundcheck.eval import selective
-from groundcheck.eval.efficiency import Efficiency
-from groundcheck.eval.efficiency import measure as measure_efficiency
-from groundcheck.eval.metrics import Metrics
+from groundcontrol.data.base import Example
+from groundcontrol.device import BenchmarkDevice, describe_runtime
+from groundcontrol.eval import metrics as metrics_mod
+from groundcontrol.eval import selective
+from groundcontrol.eval.efficiency import Efficiency
+from groundcontrol.eval.efficiency import measure as measure_efficiency
+from groundcontrol.eval.metrics import Metrics
 
 
 @dataclass(slots=True)

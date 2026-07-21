@@ -9,7 +9,7 @@ import argparse
 import json
 from pathlib import Path
 
-from groundcheck.train import TrainConfig, train
+from groundcontrol.train import TrainConfig, train
 
 
 def main() -> None:

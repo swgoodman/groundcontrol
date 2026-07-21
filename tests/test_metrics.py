@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from groundcheck.eval import metrics
+from groundcontrol.eval import metrics
 
 
 def test_perfect_confident_predictions_are_calibrated():

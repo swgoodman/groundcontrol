@@ -6,7 +6,7 @@ import pytest
 
 torch = pytest.importorskip("torch")
 
-from groundcheck.losses import (  # noqa: E402
+from groundcontrol.losses import (  # noqa: E402
     CONTRADICTED,
     NEUTRAL,
     SUPPORTED,

@@ -24,7 +24,7 @@ import unicodedata
 from collections import Counter
 from dataclasses import dataclass, field
 
-from groundcheck.data.base import Example
+from groundcontrol.data.base import Example
 
 _WHITESPACE = re.compile(r"\s+")
 

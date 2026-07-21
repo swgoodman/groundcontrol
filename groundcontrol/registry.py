@@ -51,12 +51,12 @@ _datasets = _Registry("dataset")
 _scorers = _Registry("scorer")
 
 # Declared, not imported. Each value is resolved on first `get_*`.
-_datasets.register("ragtruth", "groundcheck.data.ragtruth:RAGTruth")
-_datasets.register("fever", "groundcheck.data.fever:Fever")
-_datasets.register("halueval", "groundcheck.data.halueval:HaluEval")
-_datasets.register("aggrefact", "groundcheck.data.aggrefact:AggreFact")
+_datasets.register("ragtruth", "groundcontrol.data.ragtruth:RAGTruth")
+_datasets.register("fever", "groundcontrol.data.fever:Fever")
+_datasets.register("halueval", "groundcontrol.data.halueval:HaluEval")
+_datasets.register("aggrefact", "groundcontrol.data.aggrefact:AggreFact")
 
-_scorers.register("nli-zeroshot", "groundcheck.scorers.nli_zeroshot:NLIZeroShot")
+_scorers.register("nli-zeroshot", "groundcontrol.scorers.nli_zeroshot:NLIZeroShot")
 
 
 def register_dataset(name: str, target: str | Callable[..., Any]) -> None:

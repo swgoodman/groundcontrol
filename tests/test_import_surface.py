@@ -27,11 +27,11 @@ def test_importing_the_core_does_not_import_optional_dependencies():
     result = _run(f"""
         import sys
 
-        import groundcheck
-        import groundcheck.data
-        import groundcheck.device
-        import groundcheck.registry
-        from groundcheck.eval import metrics
+        import groundcontrol
+        import groundcontrol.data
+        import groundcontrol.device
+        import groundcontrol.registry
+        from groundcontrol.eval import metrics
 
         leaked = [name for name in {OPTIONAL!r} if name in sys.modules]
         assert not leaked, f"core import pulled in optional dependencies: {{leaked}}"
@@ -44,7 +44,7 @@ def test_listing_components_does_not_import_their_backends():
     # report what is available, without paying for datasets or torch.
     result = _run(f"""
         import sys
-        from groundcheck.registry import available_datasets, available_scorers
+        from groundcontrol.registry import available_datasets, available_scorers
 
         assert set(available_datasets()) >= {{"ragtruth", "fever", "halueval"}}
         available_scorers()
@@ -59,7 +59,7 @@ def test_getting_a_dataset_imports_its_backend():
     # The other half of the contract: resolution is deferred, not skipped.
     result = _run("""
         import sys
-        from groundcheck.registry import get_dataset
+        from groundcontrol.registry import get_dataset
 
         assert "datasets" not in sys.modules
         get_dataset("fever")

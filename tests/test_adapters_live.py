@@ -13,10 +13,10 @@ from __future__ import annotations
 
 import pytest
 
-from groundcheck.data.base import LABEL3_SOURCES, LABELS_3
-from groundcheck.data.fever import Fever
-from groundcheck.data.halueval import CONFIGS, HaluEval
-from groundcheck.data.ragtruth import RAGTruth
+from groundcontrol.data.base import LABEL3_SOURCES, LABELS_3
+from groundcontrol.data.fever import Fever
+from groundcontrol.data.halueval import CONFIGS, HaluEval
+from groundcontrol.data.ragtruth import RAGTruth
 
 pytestmark = pytest.mark.network
 

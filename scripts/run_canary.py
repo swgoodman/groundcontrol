@@ -18,11 +18,11 @@ from pathlib import Path
 
 import numpy as np
 
-from groundcheck import canary
-from groundcheck.data import injection
-from groundcheck.scorers.finetuned import Finetuned
+from groundcontrol import canary
+from groundcontrol.data import injection
+from groundcontrol.scorers.finetuned import Finetuned
 
-MODEL = "artifacts/groundcheck-deberta-v3-base-v1-local"
+MODEL = "artifacts/groundcontrol-deberta-v3-base-v1-local"
 TEMPERATURE = 1.7456764875286837
 N_PASSAGES = 5
 N_SETS = 240
@@ -66,7 +66,7 @@ def evaluate(scorer, sets) -> dict:
 
 
 def main() -> None:
-    scorer = Finetuned(MODEL, name="groundcheck", temperature=TEMPERATURE)
+    scorer = Finetuned(MODEL, name="groundcontrol", temperature=TEMPERATURE)
 
     # Two conditions. Varying k alone does not test what the canary depends on: the
     # builder keeps the refuting passage, so a trusted contradiction survives even at

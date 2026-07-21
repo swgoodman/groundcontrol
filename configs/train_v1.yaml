@@ -1,4 +1,4 @@
-run_name: groundcheck-deberta-v3-base-v1
+run_name: groundcontrol-deberta-v3-base-v1
 
 # MNLI-tuned, not the fever-anli variant: FEVER is in the training mix and the
 # comparison against the zero-shot baseline should not start from a different corpus.

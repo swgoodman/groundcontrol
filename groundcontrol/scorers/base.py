@@ -11,7 +11,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Protocol, runtime_checkable
 
-from groundcheck.data.base import Example, Label3
+from groundcontrol.data.base import Example, Label3
 
 
 @dataclass(slots=True)
