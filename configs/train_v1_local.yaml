@@ -1,0 +1,46 @@
+run_name: groundcheck-deberta-v3-base-v1-local
+
+# Same recipe as train_v1, sized for an overnight run on Apple silicon (~3.4
+# samples/sec at 512 tokens). The full mix is a ~26 hour job here; run that on a
+# CUDA GPU. Cuts are chosen by what each source contributes, not by size alone:
+#
+#   ragtruth  — kept whole. In-domain RAG output with reliable 3-way labels, the
+#               only source that is both.
+#   fever     — 15k of 228k. Out-of-domain Wikipedia, but fine-grained labels, so
+#               it is half the supervision the contradicted/neutral split gets.
+#   halueval  — 16k of 32k. Coarse labels, so it only supervises the collapsed
+#               decision; volume matters less than for the two above.
+#
+# Two epochs rather than three, warm-starting from an MNLI checkpoint.
+base_model: MoritzLaurer/DeBERTa-v3-base-mnli
+
+train_sources:
+  - name: ragtruth
+    split: train
+  - name: fever
+    split: train
+    limit: 15000
+  - name: halueval
+    split: train
+    limit: 16000
+
+eval_sources:
+  - name: ragtruth
+    split: test
+    limit: 900
+
+decontaminate_against:
+  - name: aggrefact
+    split: test
+
+max_length: 512
+learning_rate: 2.0e-5
+epochs: 2
+batch_size: 16
+eval_batch_size: 32
+warmup_ratio: 0.1
+weight_decay: 0.01
+seed: 0
+
+output_dir: artifacts
+hub_repo_id: null

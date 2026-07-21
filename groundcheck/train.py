@@ -59,6 +59,12 @@ class TrainConfig:
     seed: int = 0
     fp16: bool = False
 
+    # Step-based rather than epoch-based, so a long run is observable while it runs.
+    # Epoch-end-only reporting means no signal until half the job is spent.
+    logging_steps: int = 50
+    eval_steps: int = 500
+    save_total_limit: int = 2
+
     output_dir: str = "artifacts"
     hub_repo_id: str | None = None
 
@@ -345,8 +351,13 @@ def train(config: TrainConfig, push_to_hub: bool = False) -> dict:
         per_device_eval_batch_size=config.eval_batch_size,
         warmup_ratio=config.warmup_ratio,
         weight_decay=config.weight_decay,
-        eval_strategy="epoch",
-        save_strategy="epoch",
+        eval_strategy="steps",
+        eval_steps=config.eval_steps,
+        save_strategy="steps",
+        save_steps=config.eval_steps,
+        save_total_limit=config.save_total_limit,
+        logging_steps=config.logging_steps,
+        logging_first_step=True,
         load_best_model_at_end=True,
         metric_for_best_model="f1_notsup",
         greater_is_better=True,
