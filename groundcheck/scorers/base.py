@@ -43,6 +43,11 @@ class Verdict:
     label3: Label3 | None = None
     """3-way internal prediction, when the scorer exposes one."""
 
+    p_label3: dict[str, float] | None = None
+    """Full 3-way distribution. The injection canary needs P(contradicted) specifically:
+    a passage that merely fails to mention the claim is neutral, not contradicting, and
+    `1 - P(supported)` cannot tell those apart."""
+
     claim_verdicts: list[ClaimVerdict] = field(default_factory=list)
     passage_scores: list[PassageScore] = field(default_factory=list)
     rationale: str | None = None

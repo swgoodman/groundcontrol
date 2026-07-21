@@ -167,6 +167,10 @@ class NLIZeroShot:
                     supported=bool(p >= self.threshold),
                     score=float(p),
                     label3=verdict.label3,
+                    p_label3={
+                        internal: float(probs[self._label_index[native]])
+                        for native, internal in self.LABEL_MAP.items()
+                    },
                 )
             )
         return verdicts
