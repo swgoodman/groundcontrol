@@ -4,8 +4,8 @@ version = "0.0.1"
 description = "A calibrated groundedness scorer and pluggable eval harness for RAG faithfulness and injection detection."
 readme = "README.md"
 requires-python = ">=3.12"
-license = { text = "Apache-2.0" }
-authors = [{ name = "swgoodman" }]
+license = { text = "MIT" }
+authors = [{ name = "SG" }]
 keywords = ["nlp", "rag", "faithfulness", "hallucination", "prompt-injection", "evaluation"]
 
 dependencies = [
