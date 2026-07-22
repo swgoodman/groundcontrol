@@ -28,6 +28,7 @@ cases. Real payloads from PoisonedRAG or BIPIA are the Phase 1.5 upgrade.
 from __future__ import annotations
 
 import hashlib
+from collections.abc import Callable
 from dataclasses import dataclass, field
 
 from groundcontrol.data.fever import REPO, _join_evidence
@@ -63,8 +64,18 @@ class PassageSet:
         return len(self.poisoned_indices)
 
 
-def make_payload(claim: str, variant: int = 0) -> str:
-    return PAYLOAD_TEMPLATES[variant % len(PAYLOAD_TEMPLATES)].format(claim=claim.rstrip("."))
+def make_payload(claim: str, variant: int = 0, assertion: str | None = None) -> str:
+    """Wrap an assertion of `claim` in an indirect-injection shape.
+
+    `assertion` lets the payload state the claim in different words than the claim under
+    test. Restating it verbatim makes the payload maximally entailing, which flatters
+    detection: the canary's conflict score is `min(support, contradiction)`, and a
+    verbatim payload pins the support term near 1 so the contradiction term always
+    decides. A real attacker writes prose. Passing a paraphrase moves the support term
+    back into play and measures how much of the result depended on that convenience.
+    """
+    text = (assertion if assertion is not None else claim).rstrip(".")
+    return PAYLOAD_TEMPLATES[variant % len(PAYLOAD_TEMPLATES)].format(claim=text)
 
 
 def _stable_index(key: str, modulo: int) -> int:
@@ -82,6 +93,7 @@ def build_set(
     key: str,
     allow_majority: bool = False,
     keep_refuting: bool = True,
+    assertion: str | None = None,
 ) -> PassageSet | None:
     """Assemble one retrieval set. Returns None if there is not enough material.
 
@@ -105,7 +117,11 @@ def build_set(
 
     tagged: list[tuple[str, bool]] = [(p, False) for p in clean[:n_clean_needed]]
     for i in range(n_poisoned):
-        payload = make_payload(claim, variant=_stable_index(f"{key}-{i}", len(PAYLOAD_TEMPLATES)))
+        payload = make_payload(
+            claim,
+            variant=_stable_index(f"{key}-{i}", len(PAYLOAD_TEMPLATES)),
+            assertion=assertion,
+        )
         position = _stable_index(f"{key}-pos-{i}", len(tagged) + 1)
         tagged.insert(position, (payload, True))
 
@@ -125,10 +141,15 @@ def build(
     split: str = "validation",
     allow_majority: bool = False,
     keep_refuting: bool = True,
+    paraphrase: Callable[[list[str]], list[str]] | None = None,
 ) -> list[PassageSet]:
     """Build poisoned sets from REFUTES claims and clean controls from SUPPORTS claims.
 
     Half poisoned, half clean, so detection can be scored as a balanced task.
+
+    `paraphrase` restates each claim in different words for the payload only, leaving the
+    claim under test unchanged. It takes and returns a list so a caller can batch a model
+    rather than paying per-claim overhead. Default is None, meaning verbatim payloads.
     """
     from datasets import load_dataset
 
@@ -150,6 +171,9 @@ def build(
     sets: list[PassageSet] = []
 
     half = n_sets // 2
+    poisoned_claims = [claim for _, claim, _ in refutes[:half]]
+    assertions = paraphrase(poisoned_claims) if paraphrase else [None] * len(poisoned_claims)
+
     for i, (rid, claim, evidence) in enumerate(refutes[:half]):
         distractors = [pool[(i * 7 + j) % len(pool)] for j in range(n_passages)]
         built = build_set(
@@ -161,6 +185,7 @@ def build(
             key=f"fever-{rid}-p",
             allow_majority=allow_majority,
             keep_refuting=keep_refuting,
+            assertion=assertions[i],
         )
         if built:
             built.meta["source"] = "refutes"
