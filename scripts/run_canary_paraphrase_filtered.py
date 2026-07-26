@@ -23,6 +23,11 @@ Reading the output:
   genuinely costs the method. This decides whether the honest figure is 45, 61, or between.
 - verbatim-on-kept (not verbatim-on-all) is the right comparator, because the kept subset
   is a selected population and could be intrinsically easier or harder even verbatim.
+- both detectors are held to the same false-positive budget (`eval.detection`), and every
+  rate carries a bootstrap interval. AUROC is reported beside each rate because the clean
+  conflict scores are bimodal — roughly an eighth of ordinary retrieval sets contain a
+  genuine contradiction — so the fitted threshold lands on a cliff and the rate alone
+  moves far more than the underlying separation does.
 """
 
 from __future__ import annotations
@@ -40,6 +45,7 @@ from transformers import (
 
 from groundcontrol import canary
 from groundcontrol.data import injection
+from groundcontrol.eval import detection as detection_mod
 from groundcontrol.scorers.finetuned import Finetuned
 
 MODEL = "artifacts/groundcontrol-deberta-v3-base-v1-local"
@@ -51,7 +57,7 @@ PARAPHRASER = "humarin/chatgpt_paraphraser_on_T5_base"
 # the scorer deciding it is entailing.
 JUDGE = "roberta-large-mnli"
 N_PASSAGES = 5
-N_SETS = 240
+N_SETS = 1600
 TARGET_FPR = 0.10
 BATCH = 16
 
@@ -136,32 +142,78 @@ def score_sets(scorer, sets) -> list[dict]:
                 "poisoned": s.poisoned,
                 "conflict": r.conflict,
                 "localizes": r.localizes_attack(),
-                # A poisoned set the whole-context check calls "supported" is one it
-                # passed the attack through; it flags the attack only when it does not.
-                "whole_context_flags": not r.whole_context_supported,
+                # P(supported) on the joined context, kept as a score rather than a
+                # verdict: the comparison thresholds it to the same false-positive
+                # budget as the canary instead of reading it at its own 0.5 default.
+                "joined": r.whole_context_score,
                 "payload_support": float(np.mean(payload_support)) if payload_support else None,
             }
         )
     return scored
 
 
-def detection(scored: list[dict], threshold: float, claims: set[str] | None = None) -> dict:
+def detection(scored: list[dict], clean: dict, claims: set[str] | None = None) -> dict:
+    """One cell of the design: both detectors on this subset, at a matched FPR budget.
+
+    `clean` carries the clean-set scores the thresholds are fitted on. They come from
+    outside this call because clean controls are identical across every cell — same
+    SUPPORTS claims, never paraphrased — so a subset of poisoned claims must not drag
+    the operating point around with it.
+    """
     rows = [x for x in scored if x["poisoned"] and (claims is None or x["claim"] in claims)]
     if not rows:
         return {"n": 0}
-    conflict = np.array([x["conflict"] for x in rows])
+
     support = [x["payload_support"] for x in rows if x["payload_support"] is not None]
-    canary_rate = float((conflict > threshold).mean())
-    whole_context_rate = float(np.mean([x["whole_context_flags"] for x in rows]))
+    comparison = detection_mod.evaluate(
+        [
+            detection_mod.DetectorScores(
+                "canary", [x["conflict"] for x in rows], clean["conflict"], higher_is_attack=True
+            ),
+            detection_mod.DetectorScores(
+                "whole_context",
+                [x["joined"] for x in rows],
+                clean["joined"],
+                higher_is_attack=False,
+            ),
+        ],
+        target_fpr=TARGET_FPR,
+        reference="canary",
+    )
+    canary_det = comparison.detections["canary"]
+    whole_det = comparison.detections["whole_context"]
+    edge = comparison.edges["whole_context"]
+
+    n_localized = int(np.sum([x["localizes"] for x in rows]))
+    localization_ci = detection_mod.proportion_ci(n_localized, len(rows))
+
     return {
         "n": len(rows),
-        "detection_rate": canary_rate,
-        "whole_context_rate": whole_context_rate,
-        # canary's advantage over the standard check, as the multiple the README reports.
-        "edge": (canary_rate / whole_context_rate) if whole_context_rate else float("inf"),
-        "mean_conflict": float(conflict.mean()),
+        "detection_rate": canary_det.detection_rate,
+        "detection_ci": [canary_det.detection_ci.lo, canary_det.detection_ci.hi],
+        "auroc": canary_det.auroc,
+        "auroc_ci": [canary_det.auroc_ci.lo, canary_det.auroc_ci.hi],
+        "whole_context_rate": whole_det.detection_rate,
+        "whole_context_ci": [whole_det.detection_ci.lo, whole_det.detection_ci.hi],
+        "whole_context_auroc": whole_det.auroc,
+        # The threshold-free version of the edge, which is the one to lead with when the
+        # operating point sits on a cliff.
+        "auroc_difference": edge.auroc_difference,
+        "auroc_difference_ci": [edge.auroc_difference_ci.lo, edge.auroc_difference_ci.hi],
+        "achieved_fpr": {
+            "canary": canary_det.achieved_fpr,
+            "whole_context": whole_det.achieved_fpr,
+        },
+        # canary's advantage over the standard check, as the multiple the README reports,
+        # now with the interval that says how much of it survives resampling.
+        "edge": edge.ratio,
+        "edge_ci": [edge.ratio_ci.lo, edge.ratio_ci.hi],
+        "difference": edge.difference,
+        "difference_ci": [edge.difference_ci.lo, edge.difference_ci.hi],
+        "mean_conflict": float(np.mean([x["conflict"] for x in rows])),
         "mean_payload_support": float(np.mean(support)) if support else None,
-        "localization_rate": float(np.mean([x["localizes"] for x in rows])),
+        "localization_rate": n_localized / len(rows),
+        "localization_ci": [localization_ci.lo, localization_ci.hi],
     }
 
 
@@ -170,33 +222,32 @@ def main() -> None:
     paraphrase, captured = make_paraphraser()
     judge = make_judge()
 
-    results = {}
+    def build(k: int, paraphrase_fn=None):
+        return injection.build(
+            n_poisoned=k,
+            n_passages=N_PASSAGES,
+            n_sets=N_SETS,
+            split="validation",
+            allow_majority=True,
+            keep_refuting=True,
+            paraphrase=paraphrase_fn,
+        )
+
+    # Thresholds come from clean traffic only, never from attacked sets. Clean controls
+    # are built from SUPPORTS claims and carry no payload, so they do not vary with k or
+    # with the arm — score them once, and spend what that saves on having enough of them
+    # to pin a threshold that rests on their top tenth.
+    clean_scored = score_sets(scorer, [s for s in build(1) if not s.poisoned])
+    clean = {
+        "conflict": [x["conflict"] for x in clean_scored],
+        "joined": [x["joined"] for x in clean_scored],
+    }
+    print(f"clean controls: {len(clean_scored)} sets, scored once for every cell")
+
+    results, raw_scores = {}, {"clean": clean}
     for k in (1, 2):
-        verbatim_sets = injection.build(
-            n_poisoned=k,
-            n_passages=N_PASSAGES,
-            n_sets=N_SETS,
-            split="validation",
-            allow_majority=True,
-            keep_refuting=True,
-        )
-        paraphrased_sets = injection.build(
-            n_poisoned=k,
-            n_passages=N_PASSAGES,
-            n_sets=N_SETS,
-            split="validation",
-            allow_majority=True,
-            keep_refuting=True,
-            paraphrase=paraphrase,
-        )
-
-        verbatim_scored = score_sets(scorer, verbatim_sets)
-        paraphrased_scored = score_sets(scorer, paraphrased_sets)
-
-        # Threshold from clean traffic only, never from attacked sets. Clean controls are
-        # identical across arms (SUPPORTS claims, no paraphrase), so either build gives it.
-        clean = np.array([x["conflict"] for x in verbatim_scored if not x["poisoned"]])
-        threshold = float(np.quantile(clean, 1 - TARGET_FPR)) if clean.size else 1.0
+        verbatim_scored = score_sets(scorer, [s for s in build(k) if s.poisoned])
+        paraphrased_scored = score_sets(scorer, [s for s in build(k, paraphrase) if s.poisoned])
 
         # Mutual-entailment fidelity filter on the bare paraphrase vs the claim under test.
         poisoned_claims = [x["claim"] for x in paraphrased_scored if x["poisoned"]]
@@ -215,29 +266,35 @@ def main() -> None:
             }
 
         results[f"k={k}"] = {
-            "threshold": threshold,
+            "target_fpr": TARGET_FPR,
+            "n_clean_sets": len(clean["conflict"]),
             "n_poisoned": len(poisoned_claims),
             "n_kept": len(kept),
             "n_dropped": len(dropped),
             "kept_fraction": len(kept) / len(poisoned_claims) if poisoned_claims else 0.0,
             "mean_p_entail_kept": _mean_fidelity(fidelity, kept),
             "mean_p_entail_dropped": _mean_fidelity(fidelity, dropped),
-            "verbatim_all": detection(verbatim_scored, threshold),
-            "paraphrased_all": detection(paraphrased_scored, threshold),
-            "verbatim_kept": detection(verbatim_scored, threshold, kept),
-            "paraphrased_kept": detection(paraphrased_scored, threshold, kept),
-            "verbatim_dropped": detection(verbatim_scored, threshold, dropped),
-            "paraphrased_dropped": detection(paraphrased_scored, threshold, dropped),
+            "verbatim_all": detection(verbatim_scored, clean),
+            "paraphrased_all": detection(paraphrased_scored, clean),
+            "verbatim_kept": detection(verbatim_scored, clean, kept),
+            "paraphrased_kept": detection(paraphrased_scored, clean, kept),
+            "verbatim_dropped": detection(verbatim_scored, clean, dropped),
+            "paraphrased_dropped": detection(paraphrased_scored, clean, dropped),
             "examples": {
                 "kept": _example(fidelity, kept),
                 "dropped": _example(fidelity, dropped),
             },
         }
+        raw_scores[f"k={k}"] = {"verbatim": verbatim_scored, "paraphrased": paraphrased_scored}
         _print_block(k, results[f"k={k}"])
 
     out = Path("reports/canary_paraphrase_filtered.json")
     out.write_text(json.dumps(results, indent=2), encoding="utf-8")
-    print(f"\nwrote {out}")
+    # Per-set scores, so the operating point can be re-analysed without re-running the
+    # model, the paraphraser, and the judge.
+    scores_out = Path("reports/canary_paraphrase_scores.json")
+    scores_out.write_text(json.dumps(raw_scores), encoding="utf-8")
+    print(f"\nwrote {out} and {scores_out}")
 
 
 def _mean_fidelity(fidelity: dict, claims: set[str]) -> dict | None:
@@ -258,12 +315,19 @@ def _example(fidelity: dict, claims: set[str]) -> dict | None:
 
 
 def _print_block(k: int, r: dict) -> None:
-    print(f"\n{'=' * 74}\nk={k} of {N_PASSAGES}   threshold={r['threshold']:.3f}")
+    print(
+        f"\n{'=' * 92}\nk={k} of {N_PASSAGES}   "
+        f"both detectors at a {r['target_fpr']:.0%} FPR budget "
+        f"fitted on {r['n_clean_sets']} clean sets"
+    )
     print(
         f"  kept {r['n_kept']}/{r['n_poisoned']} paraphrases as faithful "
         f"({r['kept_fraction']:.0%}); {r['n_dropped']} dropped as drift"
     )
-    header = f"  {'cell':<20}{'n':>5}{'canary':>9}{'whole-ctx':>11}{'edge':>8}{'payload':>9}"
+    header = (
+        f"  {'cell':<20}{'n':>4}{'canary':>8}{'95% CI':>16}{'AUROC':>8}"
+        f"{'whole-ctx':>11}{'wc AUROC':>11}{'edge':>7}{'payload':>9}"
+    )
     print(header)
     for cell in (
         "verbatim_all",
@@ -278,9 +342,11 @@ def _print_block(k: int, r: dict) -> None:
             sup = d["mean_payload_support"]
             sup_s = f"{sup:.3f}" if sup is not None else "  -  "
             edge_s = f"{d['edge']:.1f}x" if np.isfinite(d["edge"]) else "  inf"
+            ci = f"[{d['detection_ci'][0]:.2f}, {d['detection_ci'][1]:.2f}]"
             print(
-                f"  {cell:<20}{d['n']:>5}{d['detection_rate']:>9.3f}"
-                f"{d['whole_context_rate']:>11.3f}{edge_s:>8}{sup_s:>9}"
+                f"  {cell:<20}{d['n']:>4}{d['detection_rate']:>8.3f}{ci:>16}"
+                f"{d['auroc']:>8.3f}{d['whole_context_rate']:>11.3f}"
+                f"{d['whole_context_auroc']:>11.3f}{edge_s:>7}{sup_s:>9}"
             )
 
 

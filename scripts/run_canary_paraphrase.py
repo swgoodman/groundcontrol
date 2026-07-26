@@ -23,6 +23,7 @@ from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
 
 from groundcontrol import canary
 from groundcontrol.data import injection
+from groundcontrol.eval import detection
 from groundcontrol.scorers.finetuned import Finetuned
 
 MODEL = "artifacts/groundcontrol-deberta-v3-base-v1-local"
@@ -59,34 +60,48 @@ def make_paraphraser():
 
 
 def evaluate(scorer, sets) -> dict:
-    poisoned, clean, localized, payload_support = [], [], [], []
-    whole_ctx_poisoned, whole_ctx_clean = [], []
+    conflict_poisoned, conflict_clean, localized, payload_support = [], [], [], []
+    joined_poisoned, joined_clean = [], []
 
     for s in sets:
         r = canary.run(scorer, s)
         if s.poisoned:
-            poisoned.append(r.conflict)
-            whole_ctx_poisoned.append(r.whole_context_supported)
+            conflict_poisoned.append(r.conflict)
+            joined_poisoned.append(r.whole_context_score)
             localized.append(r.localizes_attack())
             # The support term the payload contributes, which is what a verbatim
             # restatement inflates. Reported so the mechanism is visible, not inferred.
             payload_support.extend(v.p_supported for v in r.passage_verdicts if v.poisoned)
         else:
-            clean.append(r.conflict)
-            whole_ctx_clean.append(r.whole_context_supported)
+            conflict_clean.append(r.conflict)
+            joined_clean.append(r.whole_context_score)
 
-    poisoned_arr, clean_arr = np.array(poisoned), np.array(clean)
-    threshold = float(np.quantile(clean_arr, 1 - TARGET_FPR)) if clean_arr.size else 1.0
+    comparison = detection.evaluate(
+        [
+            detection.DetectorScores(
+                "canary", conflict_poisoned, conflict_clean, higher_is_attack=True
+            ),
+            detection.DetectorScores(
+                "whole_context", joined_poisoned, joined_clean, higher_is_attack=False
+            ),
+        ],
+        target_fpr=TARGET_FPR,
+        reference="canary",
+    )
+    n_localized = int(np.sum(localized))
+    localization_ci = detection.proportion_ci(n_localized, len(localized))
+    canary_det = comparison.detections["canary"]
 
     return {
-        "n_poisoned_sets": len(poisoned),
-        "threshold": threshold,
-        "canary_detection_rate": float((poisoned_arr > threshold).mean()),
-        "mean_conflict_poisoned": float(poisoned_arr.mean()),
-        "mean_conflict_clean": float(clean_arr.mean()),
+        "n_poisoned_sets": len(conflict_poisoned),
+        "matched_fpr": comparison.to_dict(),
+        "canary_detection_rate": canary_det.detection_rate,
+        "canary_detection_ci": [canary_det.detection_ci.lo, canary_det.detection_ci.hi],
+        "mean_conflict_poisoned": float(np.mean(conflict_poisoned)),
+        "mean_conflict_clean": float(np.mean(conflict_clean)),
         "mean_payload_support": float(np.mean(payload_support)),
-        "localization_rate": float(np.mean(localized)) if localized else 0.0,
-        "whole_context_flags_attack": float(1 - np.mean(whole_ctx_poisoned)),
+        "localization_rate": n_localized / len(localized) if localized else 0.0,
+        "localization_ci": [localization_ci.lo, localization_ci.hi],
     }
 
 
@@ -113,14 +128,19 @@ def main() -> None:
                 print(f"  claim under test: {sample.claim!r}")
                 print(f"  payload:          {sample.passages[sample.poisoned_indices[0]]!r}")
             results[name] = evaluate(scorer, sets)
-            print(json.dumps(results[name], indent=2))
 
-    print("\n" + "=" * 74)
-    print(f"{'condition':<28}{'detection':>11}{'conflict':>11}{'payload P(sup)':>16}")
+    print("\n" + "=" * 86)
+    print(
+        f"{'condition':<28}{'canary':>8}{'95% CI':>16}"
+        f"{'whole-ctx':>11}{'conflict':>10}{'payload P(sup)':>16}"
+    )
     for name, r in results.items():
+        lo, hi = r["canary_detection_ci"]
+        whole = r["matched_fpr"]["detections"]["whole_context"]["detection_rate"]
         print(
-            f"{name:<28}{r['canary_detection_rate']:>11.3f}"
-            f"{r['mean_conflict_poisoned']:>11.3f}{r['mean_payload_support']:>16.3f}"
+            f"{name:<28}{r['canary_detection_rate']:>8.3f}{f'[{lo:.2f}, {hi:.2f}]':>16}"
+            f"{whole:>11.3f}{r['mean_conflict_poisoned']:>10.3f}"
+            f"{r['mean_payload_support']:>16.3f}"
         )
 
     out = Path("reports/canary_paraphrase.json")
