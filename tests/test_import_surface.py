@@ -55,6 +55,21 @@ def test_listing_components_does_not_import_their_backends():
     assert result.returncode == 0, result.stderr
 
 
+def test_a_component_can_take_its_own_name_argument():
+    # The registry's own `name` parameter is positional-only. Otherwise a scorer that
+    # accepts `name=` (the fine-tune does, to label a leaderboard row) collides with it
+    # and is unreachable through a config, which is where every real run goes through.
+    from groundcontrol.registry import get_scorer, register_scorer
+
+    class Named:
+        def __init__(self, name: str, size: int = 1):
+            self.name, self.size = name, size
+
+    register_scorer("named-stub", Named)
+    scorer = get_scorer("named-stub", name="row-label", size=7)
+    assert (scorer.name, scorer.size) == ("row-label", 7)
+
+
 def test_getting_a_dataset_imports_its_backend():
     # The other half of the contract: resolution is deferred, not skipped.
     result = _run("""

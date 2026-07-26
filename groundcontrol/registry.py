@@ -31,7 +31,9 @@ class _Registry:
             raise ValueError(f"{self._kind} {name!r} is already registered")
         self._entries[name] = target
 
-    def get(self, name: str, **kwargs: Any) -> Any:
+    def get(self, name: str, /, **kwargs: Any) -> Any:
+        # Positional-only: a component whose constructor takes its own `name` argument
+        # would otherwise collide with this one and be unreachable through the registry.
         if name not in self._entries:
             available = ", ".join(sorted(self._entries)) or "(none registered)"
             raise KeyError(f"unknown {self._kind} {name!r}; available: {available}")
@@ -57,6 +59,7 @@ _datasets.register("halueval", "groundcontrol.data.halueval:HaluEval")
 _datasets.register("aggrefact", "groundcontrol.data.aggrefact:AggreFact")
 
 _scorers.register("nli-zeroshot", "groundcontrol.scorers.nli_zeroshot:NLIZeroShot")
+_scorers.register("finetuned", "groundcontrol.scorers.finetuned:Finetuned")
 
 
 def register_dataset(name: str, target: str | Callable[..., Any]) -> None:
@@ -69,11 +72,11 @@ def register_scorer(name: str, target: str | Callable[..., Any]) -> None:
     _scorers.register(name, target)
 
 
-def get_dataset(name: str, **kwargs: Any) -> Any:
+def get_dataset(name: str, /, **kwargs: Any) -> Any:
     return _datasets.get(name, **kwargs)
 
 
-def get_scorer(name: str, **kwargs: Any) -> Any:
+def get_scorer(name: str, /, **kwargs: Any) -> Any:
     return _scorers.get(name, **kwargs)
 
 
