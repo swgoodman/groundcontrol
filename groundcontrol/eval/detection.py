@@ -205,9 +205,11 @@ def threshold_at_fpr(clean: np.ndarray, target_fpr: float, higher_is_attack: boo
 
 
 def flags(scores: np.ndarray, threshold: float, higher_is_attack: bool) -> np.ndarray:
-    """Strict comparison in both directions, so a score exactly on the threshold is not
-    an alarm. Being strict on both sides is what keeps the achieved FPR at or under the
-    budget rather than one tie-block above it."""
+    """Flag scores past the threshold, comparing strictly so a tie is not an alarm.
+
+    Being strict on both sides is what keeps the achieved FPR at or under the budget
+    rather than one tie-block above it.
+    """
     return scores > threshold if higher_is_attack else scores < threshold
 
 
