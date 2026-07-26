@@ -1,33 +1,27 @@
 # groundcontrol 📡
 
-As I work to complete my MAS-CS, I'm interested in exploring ways to make models
+[![CI](https://github.com/swgoodman/groundcontrol/actions/workflows/ci.yml/badge.svg)](https://github.com/swgoodman/groundcontrol/actions/workflows/ci.yml) [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE) [![Python 3.12+](https://img.shields.io/badge/python-3.12%2B-blue.svg)](https://www.python.org/downloads/) [![uv](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/uv/main/assets/badge/v0.json)](https://github.com/astral-sh/uv) [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 
-- safer (behaving as intended under adversarial pressure)
-- more efficient (fewer resources to run)
-- more accountable (answers you can trace back to a source)
+> Exploring a small, CPU-based groundedness check that doubles as injection canary. This rough prototype separates poisoned retrieval sets from clean ones better than the standard check, 0.87 vs 0.74 AUROC, and names the bad passage about 99% of the time. Single dataset, further investigation required.
 
-groundcontrol explores improving safety through accountability, with a focus on detecting prompt injection and RAG poisoning. The idea is you don't need to recognize the injection attack. You need a fast read on whether the answer is anchored to evidence you trust, and a confidence score you can gate on before acting on the output. 
+The answers that matter most are often the ones your model can't give from memory: a current balance, today's policy, a specific customer record. So you retrieve external data, and retrieval reaches surfaces an attacker can touch. A page you scrape from the open web can carry text planted to be read only by the model: indirect prompt injection. A document a user uploads can be crafted to be retrieved and obeyed. A shared wiki is one compromised account away from a poisoned entry that reads as trusted, corpus poisoning by another name. As far as your system is concerned, each of these is a trusted source.
 
-And can the same check that grounds an answer also catch an injection?
+Because the answer is consequential, you gate it: a groundedness check reads the retrieved evidence, returns a confidence score, and the action goes through only if it clears the bar. That gate is meant to catch exactly this. But attacker-controlled text rides in alongside the real evidence, the check clears it with a clean score, and the action fires anyway. The injection lands, the answer reflects what the attacker planted, and nothing in the output says the retrieval set was poisoned.
 
----
+
 
 > **Summary**
 >
-> - **Problem:** typical groundedness checks break under injection. It concatenates the passages, so a planted line entails itself and passes by construction. Can we guard against this and validate grounding and injection at once?
-> - **Solution Explored:** a known move (isolate per-passage instead of concatenating, per [RobustRAG](https://arxiv.org/abs/2405.15556) and [SummaC](https://aclanthology.org/2022.tacl-1.10/)) on a small calibrated entailment model. The bet: can one 184M CPU groundedness check, called per-passage, double as an injection canary?
-> - **Early Result:** called per-passage instead of concatenated, the same check catches minor injection it otherwise passes, and names the culprit. 52–82% of synthetic injections caught vs 2–27% concatenated, poisoned passage named ~96% of the time.
-> - **Validation:** the signal survives stress testing but is bounded. Once paraphrases are filtered to faithful rewordings, honest single-injection detection is 52% at a 2.7x edge over whole-context, not the raw probe's 45% / 1.9x, which had counted drifted paraphrases that no longer assert the claim. Detection also needs a trusted contradicting passage in the set, dropping to ~26% when that evidence is displaced.
-
----
-
-
+> - **Problem:** typical groundedness checks break under injection. They concatenate the passages, so a planted line entails itself and passes by construction, and nothing in the output says so. The check returns the same confident number either way.
+> - **Explored Approach:** a known move (isolate per-passage instead of concatenating, per [RobustRAG](https://arxiv.org/abs/2405.15556) and [SummaC](https://aclanthology.org/2022.tacl-1.10/)) on a small calibrated entailment model. The bet: can one 184M CPU groundedness check, called per-passage, double as an injection canary?
+> - **Early Result:** called per-passage instead of concatenated, the same check catches minor injection it otherwise passes, and names the culprit. It separates attacked from clean sets at AUROC 0.87 [0.85, 0.89] against 0.74 [0.72, 0.77] concatenated, and names the poisoned passage ~99% of the time.
+> - **Validation:** the signal survives stress testing but is bounded, and the bound is sharp. The whole effect is the trusted contradicting passage: displace it from the retrieved set and the advantage over the concatenated check is +0.000 AUROC [-0.031, +0.034]. It is not detecting an attack, it is detecting that the evidence disagrees with itself.
 
 ## Problem
 
-RAG faithfulness tools read anchoring confidence off the concatenated retrieved set: join the passages, ask whether anything in there supports the answer, pass if something does. [RAGAS](https://github.com/explodinggradients/ragas/blob/main/src/ragas/metrics/_faithfulness.py) and [DeepEval](https://github.com/confident-ai/deepeval/blob/main/deepeval/metrics/faithfulness/faithfulness.py) both join before the entailment step; LLM-judge setups do the same. That is fine when the context is trustworthy. Under injection it fails by construction: the planted line is inside the blob you are checking, so it entails itself, and one passage vouches for the whole set.
+RAG faithfulness tools read anchoring confidence off the concatenated retrieved set: join the passages, ask whether anything in there supports the answer, pass if something does. [RAGAS](https://github.com/explodinggradients/ragas/blob/main/src/ragas/metrics/_faithfulness.py) and [DeepEval](https://github.com/confident-ai/deepeval/blob/main/deepeval/metrics/faithfulness/faithfulness.py) both join before the entailment step and LLM-judge setups do the same. That is fine when the context is trustworthy. Under injection it fails by construction: the planted line is inside the blob you are checking, so it entails itself, and one passage vouches for the whole set.
 
-## Explored Solution
+## Explored Approach
 
 The entailment fix is not new. [RobustRAG](https://arxiv.org/abs/2405.15556) (Xiang et al., 2024) resists retrieval corruption by isolating passages instead of concatenating them. [SummaC](https://aclanthology.org/2022.tacl-1.10/) (Laban et al., 2022) scores faithfulness by running NLI on each unit and aggregating, rather than on the joined blob. 
 
@@ -127,7 +121,7 @@ flowchart TB
 groundcontrol/
 ├── data/           schema, adapters, decontamination, injection-set builder
 ├── scorers/        protocol, zero-shot NLI baseline, fine-tuned scorer
-├── eval/           metrics · reporting · efficiency · risk-coverage
+├── eval/           metrics · reporting · efficiency · risk-coverage · detection
 ├── canary.py       per-passage conflict detection
 ├── calibration.py  temperature scaling with saturation detection
 ├── losses.py       3-way objective, binary supervision for coarse labels
@@ -141,33 +135,34 @@ groundcontrol/
 
 > **Verdict: supported, but the effect shrank on stress tests.** The signal is real and localization is consistent. The headline advantage was inflated by the payload template.
 
-Conflict is `min(strongest support, strongest contradiction)` which is high only when one passage supports the claim and another contradicts it. This arises in situations with a minor injection. Against the standard whole-context check on the same poisoned sets:
+Conflict is `min(strongest support, strongest contradiction)` which is high only when one passage supports the claim and another contradicts it. This arises in situations with a minor injection. Against the standard whole-context check on the same poisoned sets, both thresholded to spend the same 10% of clean traffic, 800 attacked and 800 clean sets per row:
 
 
-| poison in set | whole-context detects | canary detects | canary localizes |
-| ------------- | --------------------- | -------------- | ---------------- |
-| 1 of 5        | 1.7%                  | **60.8%**      | 97.5%            |
-| 2 of 5        | 1.7%                  | **78.3%**      | 98.3%            |
-| 3 of 5        | 0.0%                  | **80.0%**      | 98.3%            |
-| 4 of 5        | 0.0%                  | **81.7%**      | 98.3%            |
+| poison in set | whole-context AUROC | canary AUROC          | canary detects @10% FPR | canary localizes |
+| ------------- | ------------------- | --------------------- | ----------------------- | ---------------- |
+| 1 of 5        | 0.740               | **0.869** [.850,.888] | 47.9%                   | 98.6%            |
+| 2 of 5        | 0.678               | **0.883** [.865,.902] | 63.6%                   | 99.4%            |
+| 3 of 5        | 0.620               | **0.886** [.868,.905] | 69.0%                   | 99.5%            |
+| 4 of 5        | 0.575               | **0.886** [.868,.904] | 71.0%                   | 99.6%            |
 
 
-The whole-context approach catches almost nothing while the canary catches 61 to 82% and names the passage ~98% of the time.
+AUROC leads because the rate does not survive its own threshold. Clean conflict scores are bimodal: two thirds sit below 0.05, but 12% sit above 0.8, because a sampled distractor sometimes genuinely contradicts the claim. The budget is buying that tail, so two points of it move detection by thirty (5% → 0.5%, 15% → 75%). Ranking is the part that holds still.
 
 ##### Validation
 
-**Verbatim payloads flatter the canary:** restating the claim exactly pins support near 1.0, so only contradiction matters. The honest test paraphrases the payload, but a T5 paraphraser both rewords (still asserts the claim) and drifts (weakens it to a non-attack). Filtering to faithful rewordings, mutual entailment both ways against an independent roberta-large-mnli with the claim fixed, keeps 86%:
+**The trusted contradiction is the whole effect.** Poison fraction is not what the canary depends on; the surviving refuting passage is. Displace it from the retrieved set and per-passage scoring is worth nothing over concatenating:
 
 
-| payload (faithful)   | canary    | whole-context | edge     |
-| -------------------- | --------- | ------------- | -------- |
-| k=1, verbatim        | 63.5%     | 1.9%          | 33x      |
-| k=1, **paraphrased** | **51.9%** | 19.2%         | **2.7x** |
-| k=2, verbatim        | 78.8%     | 1.9%          | 41x      |
-| k=2, **paraphrased** | **64.4%** | 19.2%         | **3.4x** |
+| condition                  | canary AUROC | whole-context AUROC | gap                     |
+| -------------------------- | ------------ | ------------------- | ----------------------- |
+| 1 of 5, evidence retrieved | 0.869        | 0.740               | **+0.129** [.098, .160] |
+| 1 of 5, evidence displaced | 0.722        | 0.721               | **+0.000** [-.031,.034] |
+| 2 of 5, evidence displaced | 0.711        | 0.667               | +0.043 [.012, .078]     |
 
 
-So the honest single-injection number is **52% at a 2.7x edge**, not the raw probe's 45% / 1.9x. Localization barely moves (95.8% vs 97.5%).
+Localization stays at 99.4% when displaced, which is the tell: it still finds the payload, it just has nothing to disagree with it.
+
+**Verbatim payloads flatter the canary:** restating the claim exactly pins support near 1.0, so only contradiction matters. The honest test paraphrases the payload, but a T5 paraphraser both rewords (still asserts the claim) and drifts (weakens it to a non-attack). Filtering to faithful rewordings, mutual entailment both ways against an independent roberta-large-mnli with the claim fixed, keeps 86%. Detection drops under paraphrase and localization holds. `scripts/run_canary_paraphrase_filtered.py` regenerates the probe.
 
 #### 2. Resolution
 
@@ -184,17 +179,7 @@ Reading contradiction from the 3-way head instead took detection **0% → 61%**.
 
 #### 3. Efficiency
 
-> **Verdict: untested currently** No LLM judge was run, so the central comparison is missing. The concrete thing it should bee measured against is [IBM Granite Guardian](https://huggingface.co/ibm-granite/granite-guardian-3.3-8b), a 2–8B generative model that does groundedness as one of its RAG risk checks: bigger, not CPU-cheap, and confidence read off a Yes/No token rather than a fitted temperature. That gap, calibration you can set a threshold on, is exactly what the Efficiency bet claims and did not yet prove. What was measured is the fine-tune against a zero-shot NLI baseline, where it wins on every axis.
-
-
-|                    | LLM-AggreFact |            | RAGTruth (in-domain) |            |
-| ------------------ | ------------- | ---------- | -------------------- | ---------- |
-|                    | zero-shot     | fine-tuned | zero-shot            | fine-tuned |
-| balanced accuracy  | 0.591         | **0.695**  | 0.575                | **0.807**  |
-| F1 (not-supported) | 0.422         | **0.508**  | 0.494                | **0.740**  |
-| ECE (lower better) | 0.474         | **0.181**  | 0.275                | **0.019**  |
-| gate lift          | 0.45          | **0.63**   | 0.37                 | **0.84**   |
-
+> **Verdict: untested currently** No LLM judge was run, so the central comparison is missing. The concrete thing it should be measured against is [IBM Granite Guardian](https://huggingface.co/ibm-granite/granite-guardian-3.3-8b), a 2–8B generative model that does groundedness as one of its RAG risk checks: bigger, not CPU-cheap, and confidence read off a Yes/No token rather than a fitted temperature. That gap, calibration you can set a threshold on, is exactly what the Efficiency bet claims and did not yet prove. What was measured is the fine-tune against a zero-shot NLI baseline, where it wins on every axis: `reports/v1_comparison.md`, regenerable with `configs/v1_comparison.yaml`. Its RAGTruth column is in-sample — that split fitted the temperature and selected the checkpoint — and the report says so itself rather than leaving it to be remembered.
 
 ## Potential Next Steps
 
@@ -216,8 +201,10 @@ uv sync --all-extras         # torch, transformers, gradio
 uv run pytest                
 
 uv run python scripts/run_eval.py configs/phase0_smoke.yaml       # baseline leaderboard
+uv run python scripts/run_eval.py configs/v1_comparison.yaml      # fine-tuned vs zero-shot
 uv run python scripts/run_train.py configs/train_v1_local.yaml    # fine-tune
 uv run python scripts/run_canary.py                               # injection sweep
+uv run python scripts/run_canary.py --from-scores                 # re-analyse, no model
 uv run python scripts/run_canary_paraphrase.py                    # payload-wording probe
 uv run python scripts/run_canary_paraphrase_filtered.py           # drift-filtered probe
 ```
