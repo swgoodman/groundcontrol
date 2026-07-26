@@ -185,6 +185,35 @@ def test_no_contamination_warning_when_the_corpora_are_disjoint():
     )
 
 
+def test_markdown_flags_a_row_evaluated_on_the_split_that_fitted_it():
+    # The temperature and the best checkpoint were both chosen on this split, so its
+    # ECE is a fit reported as a measurement. The report has to say so next to the
+    # number, not leave it to whoever remembers the training config.
+    class Fitted(StubScorer):
+        fitted_on = "ragtruth"
+
+    result = run(Fitted(), _examples(["supported", "neutral"]), "ragtruth", "test")
+    md = report.to_markdown([result])
+
+    assert "## In-sample calibration" in md
+    assert "ECE" in md and "in-sample" in md
+
+
+def test_no_in_sample_warning_on_a_held_out_dataset():
+    class Fitted(StubScorer):
+        fitted_on = "ragtruth"
+
+    result = run(Fitted(), _examples(["supported", "neutral"]), "aggrefact", "test")
+    assert "## In-sample calibration" not in report.to_markdown([result])
+
+
+def test_no_in_sample_warning_for_a_scorer_that_was_never_fitted():
+    # T=1.0 was chosen by nobody, so no split is in-sample and a warning would be noise.
+    result = run(StubScorer(), _examples(["supported", "neutral"]), "ragtruth", "test")
+    assert result.notes["calibration_fitted_on"] is None
+    assert "## In-sample calibration" not in report.to_markdown([result])
+
+
 def test_report_surfaces_measured_decontamination():
     result = run(StubScorer(), _examples(["supported", "neutral"]), "aggrefact", "test")
     result.notes["decontamination"] = {"n_removed": 42}

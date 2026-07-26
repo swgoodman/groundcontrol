@@ -19,6 +19,13 @@ The default checkpoint is MNLI-only rather than the `-fever-anli` variant, which
 trained on FEVER. FEVER is one of the evaluation datasets here, and a "zero-shot"
 baseline that has seen the test set is not one. The training corpora are recorded in
 `training_corpora` so a report can state what a given checkpoint has already seen.
+
+`fitted_on` records the split that supplied the temperature and the best checkpoint.
+Reporting ECE on that split is reporting a fit on the data it was fitted to, and the
+number is different in kind from the same column on a held-out set — an order of
+magnitude apart, in this project's own results. The report reads this field and says so,
+for the same reason the contamination check exists: a caveat that has to be remembered
+is a caveat that will eventually be forgotten.
 """
 
 from __future__ import annotations
@@ -57,12 +64,17 @@ class NLIZeroShot:
         threshold: float = 0.5,
         temperature: float = 1.0,
         training_corpora: tuple[str, ...] | None = None,
+        fitted_on: str | None = None,
     ):
         self.model_name = model_name
         # A fine-tuned checkpoint is not in the known-corpora table, and its own
         # training mix is exactly what the contamination check needs to see.
         self._training_corpora = training_corpora
         self.temperature = temperature
+        # The dataset whose split fitted the temperature and picked the checkpoint.
+        # None for an unfitted scorer: T=1.0 was chosen by nobody, so no split is
+        # in-sample and there is nothing to warn about.
+        self.fitted_on = fitted_on
         suffix = "" if temperature == 1.0 else f"+T{temperature:.2f}"
         self.name = f"nli-zeroshot:{model_name.split('/')[-1]}{suffix}"
         self.device = resolve_compute_device(device)

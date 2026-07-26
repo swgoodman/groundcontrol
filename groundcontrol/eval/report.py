@@ -5,8 +5,11 @@ decision actually turns on. Rows are sorted by balanced accuracy, with the cost 
 sitting alongside rather than in a separate table, so a scorer that wins on accuracy and
 loses on latency cannot be read as a straightforward win.
 
-The report also flags contamination: a scorer trained on a corpus it is being evaluated
-against is not comparable to a zero-shot entry, and that fact belongs next to the number
+The report also flags two ways a row can be honest about its inputs and still mislead.
+*Contamination*: a scorer trained on a corpus it is being evaluated against is not
+comparable to a zero-shot entry. *In-sample calibration*: a scorer evaluated on the split
+that fitted its temperature and picked its checkpoint is reporting a fit, not a
+measurement, and its ECE and gate columns will flatter it. Both belong next to the number
 rather than in a caveat someone has to remember.
 """
 
@@ -45,6 +48,29 @@ def contamination_warnings(results: list[RunResult]) -> list[str]:
             warnings.append(
                 f"`{r.scorer}` on `{r.dataset}`: {removed} training examples appeared "
                 f"in this evaluation set and were removed before training."
+            )
+    return warnings
+
+
+def in_sample_warnings(results: list[RunResult]) -> list[str]:
+    """Flag rows evaluated on the split that fitted the scorer.
+
+    Three things were chosen on that split: the temperature, the best checkpoint, and
+    the early-stopping point. ECE is the column this ruins outright — a temperature
+    fitted to minimize NLL on a set will look calibrated on that set by construction —
+    and the gate columns inherit it, since risk-coverage ranks on the same scores. The
+    warning names the column rather than the row, so nobody reads it as a general
+    disclaimer and keeps quoting the number.
+    """
+    warnings: list[str] = []
+    for r in results:
+        fitted_on = r.notes.get("calibration_fitted_on")
+        if fitted_on and str(fitted_on).lower() == r.dataset.lower():
+            warnings.append(
+                f"`{r.scorer}` on `{r.dataset}`: temperature was fitted and the "
+                f"checkpoint selected on this split, so **ECE ({r.metrics.ece:.3f}) is "
+                f"in-sample**, as are the gate columns. Read the held-out row for a "
+                f"calibration number, not this one."
             )
     return warnings
 
@@ -101,6 +127,10 @@ def to_markdown(results: list[RunResult], title: str = "Leaderboard") -> str:
     warnings = contamination_warnings(results)
     if warnings:
         lines += ["", "## Contamination", ""] + [f"- {w}" for w in warnings]
+
+    in_sample = in_sample_warnings(results)
+    if in_sample:
+        lines += ["", "## In-sample calibration", ""] + [f"- {w}" for w in in_sample]
 
     lines += ["", "## What these columns mean", ""]
     lines += [
@@ -166,15 +196,24 @@ def to_markdown(results: list[RunResult], title: str = "Leaderboard") -> str:
     return "\n".join(lines) + "\n"
 
 
-def write(results: list[RunResult], out_dir: Path, stem: str = "leaderboard") -> dict[str, Path]:
-    """Write markdown for humans and JSON for regression tracking."""
+def write(
+    results: list[RunResult],
+    out_dir: Path,
+    stem: str = "leaderboard",
+    title: str | None = None,
+) -> dict[str, Path]:
+    """Write markdown for humans and JSON for regression tracking.
+
+    `title` defaults to the file stem so the written report is headed by the run that
+    produced it, rather than by a generic word that makes two runs indistinguishable.
+    """
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
 
     md_path = out_dir / f"{stem}.md"
     json_path = out_dir / f"{stem}.json"
 
-    md_path.write_text(to_markdown(results), encoding="utf-8")
+    md_path.write_text(to_markdown(results, title=title or stem), encoding="utf-8")
     json_path.write_text(
         json.dumps([r.to_dict() for r in results], indent=2, default=str), encoding="utf-8"
     )

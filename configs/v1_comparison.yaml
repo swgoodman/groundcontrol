@@ -1,0 +1,40 @@
+name: v1_comparison
+
+# The fine-tune against the zero-shot baseline it has to beat. This lived in notebook
+# cells, which is why the report it produced could not be regenerated when the reporting
+# changed. As a config it reruns from the CLI:
+#
+#   uv run python scripts/run_eval.py configs/v1_comparison.yaml --no-benchmark
+#
+# `fitted_on: ragtruth` is the load-bearing line. train_v1_local.yaml fits the
+# temperature and selects the checkpoint on `ragtruth/test`, so the RAGTruth row's ECE
+# and gate columns are a fit reported on its own data. Declaring it here is what makes
+# the report say so, instead of leaving it to whoever remembers the training config.
+scorers:
+  - name: finetuned
+    args:
+      model_name: artifacts/groundcontrol-deberta-v3-base-v1-local
+      name: groundcontrol-deberta-v3-base
+      temperature: 1.7456764875286837
+      training_corpora: [ragtruth, fever, halueval, mnli]
+      fitted_on: ragtruth
+      batch_size: 16
+
+  - name: nli-zeroshot
+    args:
+      model_name: MoritzLaurer/DeBERTa-v3-base-mnli
+      batch_size: 16
+
+datasets:
+  - name: aggrefact
+    split: test
+    limit: 2000
+  - name: ragtruth
+    split: test
+    limit: 1000
+
+benchmark_device: cpu
+benchmark_device_label: "local dev machine (unpublishable)"
+benchmark_n: 25
+
+output_dir: reports

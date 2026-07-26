@@ -127,5 +127,8 @@ def run(
             "coarse_label3_rate": round(coarse / len(examples), 4),
             "corpora_the_scorer_trained_on": list(getattr(scorer, "training_corpora", ())),
             "upstream_corpora_inside_this_eval_set": upstream_corpora_inside_this_eval_set,
+            # The split that fitted this scorer's temperature and selected its
+            # checkpoint. Evaluating on it makes ECE and the gate columns in-sample.
+            "calibration_fitted_on": getattr(scorer, "fitted_on", None),
         },
     )

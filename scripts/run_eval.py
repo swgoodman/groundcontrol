@@ -52,7 +52,7 @@ def main() -> None:
                 )
             )
 
-    paths = report.write(results, Path(cfg.output_dir), stem=cfg.name)
+    paths = report.write(results, Path(cfg.output_dir), stem=cfg.name, title=cfg.name)
     print(f"\n{report.to_markdown(results, title=cfg.name)}")
     for kind, path in paths.items():
         print(f"wrote {kind}: {path}")

@@ -268,7 +268,14 @@ def _collator(tokenizer):
 
 
 def fit_temperature_on(model, dataset, tokenizer, config: TrainConfig) -> tuple[float, dict]:
-    """Fit temperature on validation logits and report what it did to calibration."""
+    """Fit temperature on validation logits and report what it did to calibration.
+
+    The fitted temperature is recorded together with the sources it was fitted on. Those
+    sources are also what `load_best_model_at_end` selected the checkpoint against, so
+    every number later reported on them is in-sample and the report has to be able to say
+    which ones. Shipping the temperature without that provenance is how an ECE of 0.019
+    ends up quoted beside a held-out 0.181 as though they measured the same thing.
+    """
     import torch
     from transformers import TrainingArguments
 
@@ -304,6 +311,10 @@ def fit_temperature_on(model, dataset, tokenizer, config: TrainConfig) -> tuple[
         "ece_before": before.ece,
         "ece_after": after.ece,
         "balanced_acc": after.balanced_acc,
+        # In-sample by construction: these are the metrics of the fit on its own data.
+        "in_sample": True,
+        "fitted_on": sorted({s.name for s in config.eval_sources}),
+        "fitted_on_splits": sorted({f"{s.name}/{s.split}" for s in config.eval_sources}),
     }
 
 
