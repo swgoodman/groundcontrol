@@ -146,7 +146,7 @@ Conflict is `min(strongest support, strongest contradiction)` which is high only
 | 4 of 5        | 0.575               | **0.886** [.868,.904] | 71.0%                   | 99.6%            |
 
 
-AUROC leads because the rate does not survive its own threshold. Clean conflict scores are bimodal: two thirds sit below 0.05, but 12% sit above 0.8, because a sampled distractor sometimes genuinely contradicts the claim. The budget is buying that tail, so two points of it move detection by thirty (5% → 0.5%, 15% → 75%). Ranking is the part that holds still.
+AUROC leads because the rate does not survive its own threshold. Clean conflict scores are bimodal: two thirds sit below 0.05, but 12% sit above 0.8, because a sampled distractor sometimes genuinely contradicts the claim. The budget is buying that tail, so two points of it move detection by thirty (5% → 0.5%, 15% → 75%). Nor is the operating point itself pinned: refit on a resample of these 800 clean sets and scored on the ones it did not see, the threshold asked to spend 10% actually spends [0.06, 0.15]. That covers most of the range in the previous sentence, so the swing is not a worst case, it is where the threshold ordinarily lands. Ranking is the part that holds still.
 
 ##### Validation
 
