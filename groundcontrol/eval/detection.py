@@ -16,9 +16,19 @@ next to the target and never assumed to equal it.
 **A point estimate with no interval.** A detection rate on a few hundred sets carries
 several points of sampling error, often more than the gap being described. The bootstrap
 here resamples poisoned and clean sets together and *refits the threshold inside each
-replicate*, so the interval carries threshold-estimation noise too — the threshold is
-fitted on the same clean sets the false-positive rate is read from, and pretending it
-was known in advance would understate the spread.
+replicate*, so the interval carries threshold-estimation noise too; pretending the
+operating point was known in advance would understate the spread.
+
+The false-positive rate is then read on the clean sets that replicate held out, not on
+the ones its threshold was cut from. Scoring a fitted quantile on its own fitting sample
+returns the target back to you no matter how thin the evidence, which is a restatement
+of the budget rather than a measurement of it.
+
+**A ratio with an infinite tail, reported as though it were finite.** When the baseline
+detects almost nothing, whole replicates come back with a zero denominator, and quietly
+dropping those describes the experiment conditional on the baseline firing — an interval
+that is both too narrow and biased toward the reference. They are kept in the ordering
+here, so a ratio that is genuinely unbounded reports itself as one.
 
 Detectors are resampled on shared indices, because they score the same sets. That makes
 the interval on their ratio a paired one, which is both tighter and correct; resampling
@@ -100,6 +110,23 @@ class Detection:
     only when the clean scores are free enough of ties to cut at that quantile."""
 
     achieved_fpr_ci: Interval
+    """How far that cost could travel on clean traffic the threshold was not fitted to.
+
+    Measured out-of-bag: each replicate refits the threshold on its resample and then
+    scores it on the clean sets that resample left out. Reading the rate off the same
+    sets the quantile was cut from would pin it at the target by construction — the
+    interval would then track tie and discretization noise only, could never exceed the
+    budget however few clean controls there were, and would answer "did the quantile
+    land where I asked" rather than the question anyone has, which is "what does this
+    operating point cost tomorrow".
+
+    Runs wider than a textbook binomial spread on `n_clean`, and not only by a little:
+    each replicate fits on the ~63% of clean sets it drew and scores on the ~37% it did
+    not, so the interval carries the noise of a sample that size rather than the full
+    one. Read it as an upper bound on the drift. Erring wide is the right direction for
+    a false-positive budget, and the cheap fix for a width that hurts is the same one
+    the fixed-threshold gap points at: more clean controls."""
+
     auroc: float
     """Probability that a random attacked set outranks a random clean one. Threshold-free,
     so it survives an operating point this data cannot pin down. 0.5 is no signal."""
@@ -119,6 +146,18 @@ class Edge:
     name: str
     ratio: float
     ratio_ci: Interval
+    """Unbounded above whenever the baseline detects nothing in more than a tail's worth
+    of replicates, which in this data is the common case rather than the corner. A `hi`
+    of `inf` is the honest reading of that, and the cue to quote `difference_ci`
+    instead — see `ratio_unbounded` for how much of the bootstrap went that way."""
+
+    ratio_unbounded: float
+    """Fraction of replicates in which the baseline detected nothing, leaving the ratio
+    infinite (or, if the reference also detected nothing, undefined). Reported because
+    the ratio's point estimate looks equally authoritative at 0% and at 36%, and only
+    this number tells the two apart. Above roughly a couple of percent, `ratio_ci` is
+    unbounded and the ratio has stopped being a summary of anything."""
+
     difference: float
     """Percentage points. Reported alongside the ratio because the ratio is unstable
     when the baseline detects almost nothing: a near-zero denominator turns a modest
@@ -205,13 +244,45 @@ def auroc(poisoned: np.ndarray, clean: np.ndarray, higher_is_attack: bool = True
     return float((rank_sum - p.size * (p.size + 1) / 2.0) / (p.size * c.size))
 
 
+def _order_statistic(ordered: np.ndarray, q: float) -> float:
+    """numpy's linear-interpolation quantile, minus the arithmetic on infinities.
+
+    `inf - inf` is nan, so interpolating between an infinite neighbour and anything else
+    would report "undefined" where the honest bound is "unbounded". Interpolating across
+    an infinite neighbour has one answer, which is that infinity. Identical to
+    `np.quantile(..., method="linear")` whenever both neighbours are finite.
+    """
+    pos = q * (ordered.size - 1)
+    lo_i, hi_i = int(np.floor(pos)), int(np.ceil(pos))
+    lo, hi = ordered[lo_i], ordered[hi_i]
+    if lo_i == hi_i or lo == hi:
+        return float(lo)
+    if np.isinf(hi):
+        return float(hi)
+    if np.isinf(lo):
+        return float(lo)
+    return float(lo + (hi - lo) * (pos - lo_i))
+
+
 def _percentile_interval(samples: np.ndarray, level: float) -> Interval:
-    tail = (1.0 - level) / 2.0
-    finite = samples[np.isfinite(samples)]
-    if finite.size == 0:
+    """Percentile bounds over *every* replicate, infinities kept in the ordering.
+
+    Dropping the infinite replicates instead would report a percentile of the
+    distribution *conditional on the ratio being finite* — a tighter interval than the
+    one the name promises, and tighter in the direction that flatters the reference. An
+    infinite replicate is a real outcome, not a glitch: the denominator detected nothing
+    that time, and the ratio really is unbounded. Kept in the sort, it pushes the bound
+    to inf and says so.
+
+    NaN is the different case. An undefined replicate has no place in an ordering at
+    all, so it voids the interval rather than being quietly skipped.
+    """
+    s = np.asarray(samples, dtype=float)
+    if s.size == 0 or np.isnan(s).any():
         return Interval(float("nan"), float("nan"), level)
-    lo, hi = np.quantile(finite, [tail, 1.0 - tail])
-    return Interval(float(lo), float(hi), level)
+    tail = (1.0 - level) / 2.0
+    ordered = np.sort(s)
+    return Interval(_order_statistic(ordered, tail), _order_statistic(ordered, 1.0 - tail), level)
 
 
 def evaluate(
@@ -258,6 +329,14 @@ def evaluate(
     idx_p = rng.integers(0, n_p, size=(n_boot, n_p))
     idx_c = rng.integers(0, n_c, size=(n_boot, n_c))
 
+    # The clean sets each replicate did *not* draw — on average a bit over a third of
+    # them. The refit threshold is scored here rather than on the resample it was cut
+    # from, for the reason spelled out on `achieved_fpr_ci`.
+    held_out = np.ones((n_boot, n_c), dtype=bool)
+    np.put_along_axis(held_out, idx_c, False, axis=1)
+    n_held_out = held_out.sum(axis=1)
+    scorable = n_held_out > 0
+
     detections: dict[str, Detection] = {}
     boot_rates: dict[str, np.ndarray] = {}
     boot_auroc: dict[str, np.ndarray] = {}
@@ -272,8 +351,12 @@ def evaluate(
         q = 1.0 - target_fpr if d.higher_is_attack else target_fpr
         thresholds_b = np.quantile(clean_b, q, axis=1, keepdims=True)
         rates_b = flags(poisoned_b, thresholds_b, d.higher_is_attack).mean(axis=1)
-        fpr_b = flags(clean_b, thresholds_b, d.higher_is_attack).mean(axis=1)
         fixed_b = flags(poisoned_b, threshold, d.higher_is_attack).mean(axis=1)
+
+        # Every clean set scored against every replicate's threshold, then masked down to
+        # the ones that replicate held out.
+        flagged_clean = flags(d.clean[None, :], thresholds_b, d.higher_is_attack)
+        fpr_b = (flagged_clean & held_out)[scorable].sum(axis=1) / n_held_out[scorable]
 
         auroc_b = np.array(
             [
@@ -310,8 +393,12 @@ def evaluate(
             ratio_b = np.divide(ref_boot, other_boot)
         edges[name] = Edge(
             name=name,
-            ratio=ref_rate / other if other else float("inf"),
+            # A zero denominator makes the ratio unbounded, but only if the numerator is
+            # not also zero: two detectors that both found nothing are tied, not
+            # infinitely far apart.
+            ratio=ref_rate / other if other else (float("inf") if ref_rate else float("nan")),
             ratio_ci=_percentile_interval(ratio_b, level),
+            ratio_unbounded=float(np.mean(other_boot == 0.0)),
             difference=ref_rate - other,
             difference_ci=_percentile_interval(ref_boot - other_boot, level),
             auroc_difference=detections[reference].auroc - detections[name].auroc,
