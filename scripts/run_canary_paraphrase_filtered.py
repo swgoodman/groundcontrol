@@ -205,9 +205,13 @@ def detection(scored: list[dict], clean: dict, claims: set[str] | None = None) -
             "whole_context": whole_det.achieved_fpr,
         },
         # canary's advantage over the standard check, as the multiple the README reports,
-        # now with the interval that says how much of it survives resampling.
+        # now with the interval that says how much of it survives resampling. In the
+        # verbatim cells the baseline detects almost nothing, so `edge_ci` is unbounded
+        # above and `edge_unbounded` says how much of the bootstrap went that way — read
+        # `difference` there instead of the multiple.
         "edge": edge.ratio,
         "edge_ci": [edge.ratio_ci.lo, edge.ratio_ci.hi],
+        "edge_unbounded": edge.ratio_unbounded,
         "difference": edge.difference,
         "difference_ci": [edge.difference_ci.lo, edge.difference_ci.hi],
         "mean_conflict": float(np.mean([x["conflict"] for x in rows])),
