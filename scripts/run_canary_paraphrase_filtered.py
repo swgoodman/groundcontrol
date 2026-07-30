@@ -271,13 +271,21 @@ def main() -> None:
                 "kept": keep,
             }
 
+        # `kept` and `dropped` hold distinct claims, while `poisoned_claims` holds one
+        # entry per set and a claim can back more than one. Dividing the first by the
+        # second mixes units and understates the keep rate, so each is reported against
+        # its own denominator. `n_sets_kept` is the one to quote: it is the population
+        # every `*_kept` cell below is actually scored on.
+        unique_claims = set(poisoned_claims)
         results[f"k={k}"] = {
             "target_fpr": TARGET_FPR,
             "n_clean_sets": len(clean["conflict"]),
             "n_poisoned": len(poisoned_claims),
+            "n_claims": len(unique_claims),
             "n_kept": len(kept),
             "n_dropped": len(dropped),
-            "kept_fraction": len(kept) / len(poisoned_claims) if poisoned_claims else 0.0,
+            "kept_fraction": len(kept) / len(unique_claims) if unique_claims else 0.0,
+            "n_sets_kept": sum(1 for c in poisoned_claims if c in kept),
             "mean_p_entail_kept": _mean_fidelity(fidelity, kept),
             "mean_p_entail_dropped": _mean_fidelity(fidelity, dropped),
             "verbatim_all": detection(verbatim_scored, clean),
@@ -327,8 +335,9 @@ def _print_block(k: int, r: dict) -> None:
         f"fitted on {r['n_clean_sets']} clean sets"
     )
     print(
-        f"  kept {r['n_kept']}/{r['n_poisoned']} paraphrases as faithful "
-        f"({r['kept_fraction']:.0%}); {r['n_dropped']} dropped as drift"
+        f"  kept {r['n_kept']}/{r['n_claims']} paraphrases as faithful "
+        f"({r['kept_fraction']:.0%}), covering {r['n_sets_kept']}/{r['n_poisoned']} sets; "
+        f"{r['n_dropped']} claims dropped as drift"
     )
     header = (
         f"  {'cell':<20}{'n':>4}{'canary':>8}{'95% CI':>16}{'AUROC':>8}"
