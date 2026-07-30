@@ -18,3 +18,4 @@ reports/*.json
 !reports/phase0_smoke.json
 
 artifacts/
+.claude/
