@@ -72,7 +72,8 @@ def make_paraphraser():
 
     build() hands the callable the exact list of poisoned claims, so capturing here is
     how the experiment recovers the mapping without duplicating build's dataset logic or
-    depending on positional alignment (build_set drops some claims to None)."""
+    depending on positional alignment (build_set drops some claims to None).
+    """
     tok = AutoTokenizer.from_pretrained(PARAPHRASER)
     model = AutoModelForSeq2SeqLM.from_pretrained(PARAPHRASER)
     model.eval()
@@ -103,7 +104,8 @@ def make_judge():
 
     Label order is read from the checkpoint, never assumed, the same discipline the
     zero-shot scorer uses: a hardcoded entailment index inverts silently on a
-    contradiction-first head and still prints plausible numbers."""
+    contradiction-first head and still prints plausible numbers.
+    """
     tok = AutoTokenizer.from_pretrained(JUDGE)
     model = AutoModelForSequenceClassification.from_pretrained(JUDGE)
     model.eval()
