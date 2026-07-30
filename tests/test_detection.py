@@ -81,6 +81,36 @@ def test_edge_reports_a_finite_difference_when_the_ratio_blows_up():
     edge = result.edges["whole"]
     assert edge.difference == pytest.approx(1.0)
     assert np.isinf(edge.ratio)
+    # Every replicate has a zero denominator, so there is no finite bound to report.
+    assert edge.ratio_unbounded == 1.0
+    assert np.isinf(edge.ratio_ci.hi)
+
+
+def test_ratio_interval_stays_unbounded_when_the_baseline_sometimes_detects_nothing():
+    # The regime the README's headline multiples live in: a baseline detecting ~2% of
+    # attacks returns a zero denominator in a good fraction of replicates. Discarding
+    # those and quoting a percentile of what survives describes the experiment
+    # *conditional on the baseline firing*, which is a narrower and different claim.
+    clean = np.linspace(0.0, 1.0, 100)
+    canary = scores([0.99] * 100, clean, name="canary")
+    weak = scores([0.95] * 2 + [0.5] * 98, clean, name="weak")
+
+    edge = detection.evaluate([canary, weak], target_fpr=0.10, n_boot=2000).edges["weak"]
+
+    assert 0.05 < edge.ratio_unbounded < 0.30
+    assert np.isinf(edge.ratio_ci.hi)
+    assert np.isfinite(edge.ratio_ci.lo)
+    # The finite summary of the same gap stays readable, which is why it is the one to
+    # quote in this regime.
+    assert np.isfinite(edge.difference_ci.hi)
+
+
+def test_a_tie_at_zero_is_not_an_infinite_edge():
+    # Both detectors find nothing. They are tied, not infinitely far apart.
+    a = scores([0.5] * 20, [0.99] * 20, name="canary")
+    b = scores([0.5] * 20, [0.99] * 20, name="whole")
+    edge = detection.evaluate([a, b], target_fpr=0.10, n_boot=100).edges["whole"]
+    assert np.isnan(edge.ratio)
 
 
 def test_reference_defaults_to_the_first_detector():
@@ -127,6 +157,48 @@ def test_the_interval_carries_threshold_uncertainty():
     fixed_width = np.quantile(fixed, 0.975) - np.quantile(fixed, 0.025)
 
     assert (refit.hi - refit.lo) > fixed_width
+
+
+def test_achieved_fpr_interval_reflects_how_few_clean_controls_pinned_it():
+    # Scoring the refit threshold on the same resample it was cut from pins the rate at
+    # the target by construction, so the interval would be near-degenerate at every
+    # sample size. Read out-of-bag, it has to widen as the clean controls thin out.
+    def ci_for(n_clean):
+        rng = np.random.default_rng(11)
+        d = scores(rng.normal(0.8, 0.2, 200), rng.normal(0.2, 0.2, n_clean), name="d")
+        return detection.evaluate([d], target_fpr=0.10, n_boot=2000).detections["d"].achieved_fpr_ci
+
+    few, many = ci_for(50), ci_for(2000)
+    assert (few.hi - few.lo) > 3 * (many.hi - many.lo)
+
+
+def test_achieved_fpr_interval_can_exceed_the_budget_it_was_fitted_to():
+    # The question the field exists to answer is what this operating point costs on
+    # clean traffic it has not seen, and the honest answer is sometimes "more than you
+    # asked for". An interval capped at the target could never say that.
+    rng = np.random.default_rng(12)
+    d = scores(rng.normal(0.8, 0.2, 200), rng.normal(0.2, 0.2, 60), name="d")
+    det = detection.evaluate([d], target_fpr=0.10, n_boot=2000).detections["d"]
+    assert det.achieved_fpr == pytest.approx(0.10, abs=0.03)
+    assert det.achieved_fpr_ci.hi > det.target_fpr
+
+
+def test_interval_matches_numpy_when_every_replicate_is_finite():
+    # The infinity handling must not perturb the ordinary case, which is every other
+    # quantity in this module.
+    rng = np.random.default_rng(13)
+    samples = rng.normal(0.0, 1.0, 999)
+    ci = detection._percentile_interval(samples, 0.95)
+    lo, hi = np.quantile(samples, [0.025, 0.975])
+    assert (ci.lo, ci.hi) == pytest.approx((lo, hi))
+
+
+def test_an_undefined_replicate_voids_the_interval_rather_than_being_skipped():
+    # nan cannot be placed in an ordering, so there is no percentile to report. Silently
+    # dropping it would quote an interval over a subset while labelling it the whole.
+    samples = np.array([1.0, 2.0, np.nan, 4.0])
+    ci = detection._percentile_interval(samples, 0.95)
+    assert np.isnan(ci.lo) and np.isnan(ci.hi)
 
 
 def test_evaluation_is_reproducible_from_the_seed():
