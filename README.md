@@ -33,7 +33,7 @@ I put the existing solution and hypothesis head-to-head: same data for both, and
 > - AUROC — pick one attacked set and one clean set at random. This is how often the attacked one scores higher. 0.5 is a coin flip. 1.0 is perfect. Brackets are 95% confidence intervals.
 > - Detects @10% FPR — the share of attacks caught when the alarm is only allowed to go off on 10% of clean traffic.
 > - Localizes — when a set really is attacked, how often the top-scoring passage is the poisoned one.
-> - Why AUROC is the headline — "attacked scores higher than clean" holds up on new data. The exact threshold doesn't: tuned for a 10% false-alarm rate, it actually fires on anywhere from 6% to 15% of clean traffic it hasn't seen. So AUROC is the reliable number, and the detection column is an estimate.
+> - AUROC v FPR — "attacked scores higher than clean" holds up on new data. The exact threshold doesn't: tuned for a 10% false-alarm rate, it actually fires on anywhere from 6% to 15% of clean traffic it hasn't seen. So AUROC is the reliable number, and the detection column is an estimate.
 
 ### Four findings that shape the result
 
